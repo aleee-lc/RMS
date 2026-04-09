@@ -1,0 +1,165 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum RecommendationAction {
+  INCREASE
+  DECREASE
+  HOLD
+}
+
+model Hotel {
+  id              Int                      @id @default(autoincrement())
+  code            String                   @unique
+  name            String
+  totalRooms      Int
+  currency        String                   @default("MXN")
+  timezone        String                   @default("America/Mexico_City")
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  reservations    ReservationRaw[]
+  dailyMetrics    DailyMetrics[]
+  marketRates     MarketRates[]
+  competitors     Competitor[]
+  alerts          Alerts[]
+  recommendations Recommendations[]
+
+  @@index([name])
+}
+
+model ReservationRaw {
+  id                    Int       @id @default(autoincrement())
+  hotelId               Int
+  reservationExternalId String
+  bookingDate           DateTime
+  arrivalDate           DateTime
+  departureDate         DateTime?
+  nights                Int       @default(1)
+  noOfRooms             Int       @default(1)
+  roomRate              Decimal   @db.Decimal(10, 2)
+  sourceStatus          String?
+  sourceUser            String?
+  rawPayload            Json?
+  createdAt             DateTime  @default(now())
+  hotel                 Hotel     @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  @@unique([hotelId, reservationExternalId])
+  @@index([hotelId, arrivalDate])
+  @@index([hotelId, bookingDate])
+}
+
+model DailyMetrics {
+  id          Int      @id @default(autoincrement())
+  hotelId     Int
+  date        DateTime
+  bookedRooms Int      @default(0)
+  occupancy   Decimal  @db.Decimal(5, 2)
+  adr         Decimal  @db.Decimal(10, 2)
+  revenue     Decimal  @db.Decimal(12, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  hotel       Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  @@unique([hotelId, date])
+  @@index([hotelId, date])
+  @@index([date])
+}
+
+model MarketRates {
+  id                Int                     @id @default(autoincrement())
+  hotelId           Int
+  date              DateTime
+  yourPrice         Decimal?                @db.Decimal(10, 2)
+  marketAverage     Decimal?                @db.Decimal(10, 2)
+  sourceFile        String?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  hotel             Hotel                   @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  competitorRates   CompetitorMarketRates[]
+  recommendations   Recommendations[]
+
+  @@unique([hotelId, date])
+  @@index([hotelId, date])
+}
+
+model Competitor {
+  id          Int                     @id @default(autoincrement())
+  hotelId     Int
+  name        String
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  hotel       Hotel                   @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  marketRates CompetitorMarketRates[]
+
+  @@unique([hotelId, name])
+  @@index([hotelId])
+}
+
+model CompetitorMarketRates {
+  id           Int        @id @default(autoincrement())
+  competitorId Int
+  marketRateId Int
+  price        Decimal    @db.Decimal(10, 2)
+  createdAt    DateTime   @default(now())
+  competitor   Competitor @relation(fields: [competitorId], references: [id], onDelete: Cascade)
+  marketRate   MarketRates @relation(fields: [marketRateId], references: [id], onDelete: Cascade)
+
+  @@unique([competitorId, marketRateId])
+  @@index([marketRateId])
+  @@index([competitorId])
+}
+
+model Recommendations {
+  id             Int                  @id @default(autoincrement())
+  hotelId        Int
+  marketRateId   Int?
+  date           DateTime
+  action         RecommendationAction
+  suggestedPrice Decimal              @db.Decimal(10, 2)
+  explanation    String
+  occupancy      Decimal?             @db.Decimal(5, 2)
+  yourPrice      Decimal?             @db.Decimal(10, 2)
+  marketAverage  Decimal?             @db.Decimal(10, 2)
+  priceDiffPct   Decimal?             @db.Decimal(6, 2)
+  demandFactor   Decimal?             @db.Decimal(6, 4)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  hotel          Hotel                @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  marketRate     MarketRates?         @relation(fields: [marketRateId], references: [id], onDelete: SetNull)
+  alerts         Alerts[]
+
+  @@unique([hotelId, date])
+  @@index([hotelId, date])
+  @@index([action])
+}
+
+model Alerts {
+  id               Int           @id @default(autoincrement())
+  hotelId          Int
+  recommendationId Int?
+  date             DateTime
+  type             String
+  severity         AlertSeverity
+  title            String
+  message          String
+  resolved         Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  hotel            Hotel         @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  recommendation   Recommendations? @relation(fields: [recommendationId], references: [id], onDelete: SetNull)
+
+  @@unique([hotelId, date, type])
+  @@index([hotelId, date, resolved])
+  @@index([severity, resolved])
+}

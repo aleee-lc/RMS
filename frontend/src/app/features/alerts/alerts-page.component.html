@@ -1,0 +1,67 @@
+<section class="page">
+  <h1>Alertas</h1>
+
+  <div class="filters">
+    <app-date-range-filter
+      [startDate]="dateRange().startDate"
+      [endDate]="dateRange().endDate"
+      [disabled]="loading()"
+      (applyDateRange)="onDateRangeApply($event)"
+    />
+
+    <mat-form-field appearance="outline" class="resolved-field">
+      <mat-label>Estado</mat-label>
+      <mat-select [formControl]="filterForm.controls.resolved">
+        <mat-option value="all">Todas</mat-option>
+        <mat-option value="false">Activas</mat-option>
+        <mat-option value="true">Resueltas</mat-option>
+      </mat-select>
+    </mat-form-field>
+  </div>
+
+  <mat-progress-bar *ngIf="loading()" mode="indeterminate" />
+
+  <mat-card>
+    <mat-card-content>
+      <div class="table-wrap" *ngIf="items().length; else emptyState">
+        <table mat-table [dataSource]="items()" class="full-width">
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef>Fecha</th>
+            <td mat-cell *matCellDef="let row">{{ row.date }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="severity">
+            <th mat-header-cell *matHeaderCellDef>Severidad</th>
+            <td mat-cell *matCellDef="let row">
+              <span class="severity" [ngClass]="severityClass(row.severity)">
+                {{ row.severity | uppercase }}
+              </span>
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="title">
+            <th mat-header-cell *matHeaderCellDef>Título</th>
+            <td mat-cell *matCellDef="let row">{{ row.title }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="message">
+            <th mat-header-cell *matHeaderCellDef>Mensaje</th>
+            <td mat-cell *matCellDef="let row" class="message">{{ row.message }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="resolved">
+            <th mat-header-cell *matHeaderCellDef>Resuelta</th>
+            <td mat-cell *matCellDef="let row">{{ row.resolved ? 'Sí' : 'No' }}</td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <ng-template #emptyState>
+    <div class="empty">No hay alertas para los filtros actuales.</div>
+  </ng-template>
+</section>

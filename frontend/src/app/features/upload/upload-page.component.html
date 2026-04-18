@@ -1,0 +1,57 @@
+<section class="page">
+  <h1>Ingesta de Datos</h1>
+  <p class="subtitle">Sube archivos XML y Excel para actualizar métricas y recomendaciones.</p>
+
+  <div class="grid">
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>XML de Opera</mat-card-title>
+        <mat-card-subtitle>Reservation Entered On / History & Forecast</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <p>Formato soportado: <code>.xml</code></p>
+        <input #xmlInput type="file" accept=".xml" hidden (change)="onXmlFileSelected($event)" />
+        <button mat-flat-button color="primary" (click)="xmlInput.click()" [disabled]="xmlUploading()">
+          <mat-icon>upload_file</mat-icon>
+          Subir XML
+        </button>
+        <mat-progress-bar *ngIf="xmlUploading()" mode="indeterminate"></mat-progress-bar>
+      </mat-card-content>
+      <mat-card-content *ngIf="xmlResult() as result" class="result">
+        <h3>Resultado</h3>
+        <pre>{{ result | json }}</pre>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Excel de Mercado</mat-card-title>
+        <mat-card-subtitle>Expedia Price Grid</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <p>Formato soportado: <code>.xlsx</code> / <code>.xls</code></p>
+        <input
+          #excelInput
+          type="file"
+          accept=".xlsx,.xls"
+          hidden
+          (change)="onExcelFileSelected($event)"
+        />
+        <button
+          mat-flat-button
+          color="primary"
+          (click)="excelInput.click()"
+          [disabled]="excelUploading()"
+        >
+          <mat-icon>table_view</mat-icon>
+          Subir Excel
+        </button>
+        <mat-progress-bar *ngIf="excelUploading()" mode="indeterminate"></mat-progress-bar>
+      </mat-card-content>
+      <mat-card-content *ngIf="excelResult() as result" class="result">
+        <h3>Resultado</h3>
+        <pre>{{ result | json }}</pre>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</section>

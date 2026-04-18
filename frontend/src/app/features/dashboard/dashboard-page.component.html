@@ -1,0 +1,62 @@
+﻿<section class="page">
+  <h1>Dashboard RM</h1>
+  <app-date-range-filter
+    [startDate]="dateRange().startDate"
+    [endDate]="dateRange().endDate"
+    [disabled]="loading()"
+    (applyDateRange)="onDateRangeApply($event)"
+  />
+
+  <mat-progress-bar *ngIf="loading()" mode="indeterminate" />
+
+  <div class="kpi-grid">
+    <app-kpi-card
+      title="Ocupación Promedio"
+      [value]="(avgOccupancy() | number: '1.2-2') + '%'"
+      subtitle="Sobre el rango seleccionado"
+      icon="hotel"
+    />
+
+    <app-kpi-card
+      title="ADR Promedio"
+      [value]="(avgAdr() | currency: 'MXN' : 'symbol' : '1.2-2') ?? '-'"
+      subtitle="Tarifa diaria promedio"
+      icon="paid"
+    />
+
+    <app-kpi-card
+      title="Revenue Total"
+      [value]="(totalRevenue() | currency: 'MXN' : 'symbol' : '1.2-2') ?? '-'"
+      subtitle="Ingresos en el periodo"
+      icon="savings"
+    />
+
+    <app-kpi-card
+      title="Alertas Activas"
+      [value]="alerts().length.toString()"
+      subtitle="resolved = false"
+      icon="notification_important"
+    />
+  </div>
+
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Tendencia de Métricas</mat-card-title>
+      <mat-card-subtitle>Ocupación, ADR y Revenue por fecha</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="chart-wrap" *ngIf="metrics().length; else noData">
+        <canvas
+          baseChart
+          [type]="chartType"
+          [data]="chartData()"
+          [options]="chartOptions"
+        ></canvas>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <ng-template #noData>
+    <div class="no-data">No hay datos para el rango seleccionado.</div>
+  </ng-template>
+</section>

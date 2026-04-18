@@ -7,6 +7,7 @@ import { MetricsModule } from './metrics/metrics.module';
 import { MarketModule } from './market/market.module';
 import { RecommendationModule } from './recommendation/recommendation.module';
 import { AlertsModule } from './alerts/alerts.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -17,7 +18,8 @@ import { AlertsModule } from './alerts/alerts.module';
     MetricsModule,
     MarketModule,
     RecommendationModule,
-    AlertsModule
+    AlertsModule,
+    ReportsModule
   ]
 })
 export class AppModule {}

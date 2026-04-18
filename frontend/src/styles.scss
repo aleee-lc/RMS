@@ -1,0 +1,72 @@
+@use '@angular/material' as mat;
+
+@include mat.core();
+
+$primary-palette: mat.m2-define-palette(mat.$m2-cyan-palette, 700, 500, 900);
+$accent-palette: mat.m2-define-palette(mat.$m2-blue-palette, 600, 400, 800);
+$warn-palette: mat.m2-define-palette(mat.$m2-red-palette, 700);
+
+$theme: mat.m2-define-light-theme(
+  (
+    color: (
+      primary: $primary-palette,
+      accent: $accent-palette,
+      warn: $warn-palette
+    ),
+    density: 0
+  )
+);
+
+@include mat.all-component-themes($theme);
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  font-family: 'Segoe UI', 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  color: #0f172a;
+  background: #f8fafc;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+mat-card {
+  border-radius: 16px;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+th.mat-mdc-header-cell {
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #475569;
+}
+
+td.mat-mdc-cell {
+  font-size: 0.88rem;
+}
+
+.mdc-snackbar__surface {
+  border-radius: 12px !important;
+}

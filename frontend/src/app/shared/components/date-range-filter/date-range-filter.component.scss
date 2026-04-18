@@ -1,0 +1,15 @@
+﻿.date-range-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.range-field {
+  min-width: 320px;
+  flex: 1 1 380px;
+}
+
+button {
+  height: 56px;
+}

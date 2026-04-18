@@ -1,0 +1,35 @@
+.page {
+  display: grid;
+  gap: 1rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.header p {
+  margin: 0;
+  color: #64748b;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.explanation {
+  min-width: 380px;
+  white-space: normal;
+}
+
+.empty {
+  padding: 1rem;
+  color: #64748b;
+}

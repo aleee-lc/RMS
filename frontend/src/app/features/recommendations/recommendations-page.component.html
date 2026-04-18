@@ -1,0 +1,72 @@
+<section class="page">
+  <div class="header">
+    <div>
+      <h1>Recomendaciones</h1>
+      <p>Acciones de pricing por día según ocupación e índice de mercado.</p>
+    </div>
+
+    <button mat-flat-button color="primary" (click)="onRefreshClick()" [disabled]="loading()">
+      <mat-icon>refresh</mat-icon>
+      Refresh
+    </button>
+  </div>
+
+  <app-date-range-filter
+    [startDate]="dateRange().startDate"
+    [endDate]="dateRange().endDate"
+    [disabled]="loading()"
+    (applyDateRange)="onDateRangeApply($event)"
+  />
+
+  <mat-progress-bar *ngIf="loading()" mode="indeterminate" />
+
+  <mat-card>
+    <mat-card-content>
+      <div class="table-wrap" *ngIf="items().length; else emptyState">
+        <table mat-table [dataSource]="items()" class="full-width">
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef>Fecha</th>
+            <td mat-cell *matCellDef="let row">{{ row.date }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="action">
+            <th mat-header-cell *matHeaderCellDef>Acción</th>
+            <td mat-cell *matCellDef="let row"><app-action-badge [action]="row.action" /></td>
+          </ng-container>
+
+          <ng-container matColumnDef="suggested_price">
+            <th mat-header-cell *matHeaderCellDef>Precio Sugerido</th>
+            <td mat-cell *matCellDef="let row">{{ row.suggested_price | currency: 'MXN' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="occupancy">
+            <th mat-header-cell *matHeaderCellDef>Ocupación</th>
+            <td mat-cell *matCellDef="let row">{{ row.occupancy | number: '1.2-2' }}%</td>
+          </ng-container>
+
+          <ng-container matColumnDef="your_price">
+            <th mat-header-cell *matHeaderCellDef>Tu Precio</th>
+            <td mat-cell *matCellDef="let row">{{ row.your_price | currency: 'MXN' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="market_average">
+            <th mat-header-cell *matHeaderCellDef>Promedio Mercado</th>
+            <td mat-cell *matCellDef="let row">{{ row.market_average | currency: 'MXN' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="explanation">
+            <th mat-header-cell *matHeaderCellDef>Explicación</th>
+            <td mat-cell *matCellDef="let row" class="explanation">{{ row.explanation }}</td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        </table>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <ng-template #emptyState>
+    <div class="empty">No hay recomendaciones para el rango seleccionado.</div>
+  </ng-template>
+</section>

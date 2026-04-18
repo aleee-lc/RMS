@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { PrismaClient, RecommendationAction, AlertSeverity } from '@prisma/client';
 
 const prisma = new PrismaClient();

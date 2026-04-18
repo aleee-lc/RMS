@@ -10,6 +10,7 @@ Production-oriented MVP backend for hotel Revenue Management decision support.
 - Market and competitor rate persistence
 - Rule-based pricing recommendations
 - Alert generation from recommendation outcomes
+- Report generation for RM analysis (`/reports/*`)
 
 Stack:
 
@@ -30,6 +31,7 @@ src/
   market/
   recommendation/
   alerts/
+  reports/
 prisma/
   schema.prisma
   migrations/
@@ -86,6 +88,23 @@ Extracts per reservation:
 - `room_rate` from `SHARE_AMOUNT_PER_STAY` or `SHARE_AMOUNT`
 
 Stores raw reservation records in `ReservationRaw` and then recomputes `DailyMetrics` for the arrival-date range found in the upload.
+
+### XML History and Forecast (Opera Cloud)
+
+`POST /upload/xml` also supports Opera `History and Forecast` XML reports:
+
+- Detects `A_STAT` (History) and `B_FORE` (Forecast) sections
+- Parses daily `CONSIDERED_DATE`, `CF_CALC_OCC_ROOMS`, `CF_OCCUPANCY`, `CF_AVERAGE_ROOM_RATE`, and `REVENUE`
+- Writes directly to `DailyMetrics` for the reported date horizon
+
+### XML CRS Room Rate Distribution
+
+`POST /upload/xml` also supports CRS `RoomRateDistribution` XML exports:
+
+- Reads report criteria (`StartDate`, `EndDate`, `WhichDate`, `ShowGroups`, `Currency`)
+- Extracts grand totals (`Reservation_Count`, `Room_Nights`, `Revenue`, `ADR`)
+- Stores a snapshot for reconciliation against RMS totals
+- Re-uploading the same criteria window updates the snapshot and returns deltas
 
 ### Expedia Excel Market Grid
 
@@ -169,6 +188,80 @@ Query params:
 - `endDate` (optional)
 - `resolved` (optional: `true|false`)
 
+### `GET /reports/pickup`
+
+Booking pickup by booking-date and stay-date windows.
+
+Query params:
+
+- `hotelId` (optional)
+- `bookingStartDate` (optional, ISO date)
+- `bookingEndDate` (optional, ISO date)
+- `stayStartDate` (optional, ISO date)
+- `stayEndDate` (optional, ISO date)
+
+### `GET /reports/forecast-variance`
+
+Compares baseline metrics (`DailyMetrics`) against current OTB from reservations.
+
+Query params:
+
+- `hotelId` (optional)
+- `startDate` (optional, ISO date)
+- `endDate` (optional, ISO date)
+
+### `GET /reports/market-position`
+
+Shows price gap vs market and competitor ranking by day.
+
+Query params:
+
+- `hotelId` (optional)
+- `startDate` (optional, ISO date)
+- `endDate` (optional, ISO date)
+
+### `GET /reports/recommendation-compliance`
+
+Evaluates alignment between current price and suggested recommendation.
+
+Query params:
+
+- `hotelId` (optional)
+- `startDate` (optional, ISO date)
+- `endDate` (optional, ISO date)
+- `tolerancePct` (optional, default `2`)
+
+### `GET /reports/revenue-opportunity`
+
+Estimates upside and overpricing risk from recommendation deltas.
+
+Query params:
+
+- `hotelId` (optional)
+- `startDate` (optional, ISO date)
+- `endDate` (optional, ISO date)
+
+### `GET /reports/executive-summary`
+
+Consolidated KPI + risk + opportunity summary for business review.
+
+Query params:
+
+- `hotelId` (optional)
+- `startDate` (optional, ISO date)
+- `endDate` (optional, ISO date)
+
+### `GET /reports/crs-reconciliation`
+
+Compares RMS totals against the latest matching CRS `RoomRateDistribution` snapshot.
+
+Query params:
+
+- `hotelId` (optional)
+- `startDate` (optional, ISO date)
+- `endDate` (optional, ISO date)
+- `whichDate` (optional, e.g., `Confirmation`)
+
 ## 6. Example Requests
 
 ```bash
@@ -183,6 +276,23 @@ curl "http://localhost:3000/metrics?startDate=2026-04-01&endDate=2026-04-15"
 curl "http://localhost:3000/recommendations?startDate=2026-04-08&endDate=2026-04-21"
 
 curl "http://localhost:3000/alerts?resolved=false"
+
+curl "http://localhost:3000/reports/pickup?bookingStartDate=2026-04-01&bookingEndDate=2026-04-09&stayStartDate=2026-04-09&stayEndDate=2026-06-30"
+
+curl "http://localhost:3000/reports/forecast-variance?startDate=2026-04-09&endDate=2026-06-30"
+
+curl "http://localhost:3000/reports/market-position?startDate=2026-04-09&endDate=2026-06-30"
+
+curl "http://localhost:3000/reports/recommendation-compliance?startDate=2026-04-09&endDate=2026-05-15&tolerancePct=2"
+
+curl "http://localhost:3000/reports/revenue-opportunity?startDate=2026-04-09&endDate=2026-05-15"
+
+curl "http://localhost:3000/reports/executive-summary?startDate=2026-04-09&endDate=2026-05-15"
+
+curl -X POST "http://localhost:3000/upload/xml?hotelId=1" \
+  -F "file=@C:/path/RoomRateDistribution.xml"
+
+curl "http://localhost:3000/reports/crs-reconciliation?hotelId=1&startDate=2026-03-01&endDate=2026-03-31&whichDate=Confirmation"
 ```
 
 ## 7. ERD (Mermaid)

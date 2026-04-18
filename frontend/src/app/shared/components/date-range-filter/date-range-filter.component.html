@@ -1,0 +1,19 @@
+﻿<form [formGroup]="form" class="date-range-form">
+  <mat-form-field appearance="outline" class="range-field">
+    <mat-label>Rango de fechas</mat-label>
+    <mat-date-range-input [rangePicker]="picker">
+      <input matStartDate formControlName="startDate" placeholder="Fecha inicial" />
+      <input matEndDate formControlName="endDate" placeholder="Fecha final" />
+    </mat-date-range-input>
+    <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+    <mat-date-range-picker #picker></mat-date-range-picker>
+    <mat-error *ngIf="form.controls.endDate.hasError('invalidRange')">
+      La fecha final debe ser mayor o igual a la inicial.
+    </mat-error>
+  </mat-form-field>
+
+  <button mat-flat-button color="primary" type="button" (click)="onApply()" [disabled]="disabled">
+    <mat-icon>calendar_month</mat-icon>
+    Aplicar
+  </button>
+</form>

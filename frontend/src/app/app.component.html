@@ -1,0 +1,24 @@
+<div class="app-shell">
+  <mat-toolbar class="topbar" color="primary">
+    <div class="brand">
+      <mat-icon>hotel</mat-icon>
+      <span>RMS Console</span>
+    </div>
+
+    <nav class="top-nav">
+      <a
+        *ngFor="let item of navItems"
+        mat-button
+        [routerLink]="item.path"
+        routerLinkActive="active-link"
+      >
+        <mat-icon>{{ item.icon }}</mat-icon>
+        {{ item.label }}
+      </a>
+    </nav>
+  </mat-toolbar>
+
+  <main class="content">
+    <router-outlet />
+  </main>
+</div>

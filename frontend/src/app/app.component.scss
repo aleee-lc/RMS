@@ -1,0 +1,58 @@
+:host {
+  display: block;
+  min-height: 100vh;
+}
+
+.app-shell {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 10% 10%, rgba(20, 184, 166, 0.1), transparent 38%),
+    radial-gradient(circle at 90% 0%, rgba(14, 165, 233, 0.12), transparent 42%),
+    #f8fafc;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  min-height: 74px;
+  padding-inline: clamp(1rem, 3vw, 2rem);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.top-nav {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.top-nav a {
+  border-radius: 999px;
+}
+
+.active-link {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.content {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: clamp(1rem, 2vw, 1.5rem);
+}
+
+@media (max-width: 760px) {
+  .top-nav {
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 0.35rem;
+  }
+}

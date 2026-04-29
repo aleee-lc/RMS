@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { AlertSeverity, RecommendationAction, Recommendations } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { toUtcDateOnly } from '../common/utils/date.util';
@@ -67,6 +67,24 @@ export class AlertsService {
         resolved
       },
       orderBy: [{ resolved: 'asc' }, { severity: 'desc' }, { date: 'asc' }]
+    });
+  }
+
+  async setResolvedState(hotelId: number, alertId: number, resolved: boolean) {
+    const alert = await this.prisma.alerts.findFirst({
+      where: {
+        id: alertId,
+        hotelId
+      }
+    });
+
+    if (!alert) {
+      throw new NotFoundException(`Alert ${alertId} not found for hotel ${hotelId}`);
+    }
+
+    return this.prisma.alerts.update({
+      where: { id: alertId },
+      data: { resolved }
     });
   }
 

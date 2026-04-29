@@ -42,6 +42,8 @@ export class DateRangeFilterComponent implements OnChanges {
   @Input({ required: true }) startDate = '';
   @Input({ required: true }) endDate = '';
   @Input() disabled = false;
+  @Input() mode: 'past' | 'future' = 'past';
+  @Input() showPresets = true;
 
   @Output() applyDateRange = new EventEmitter<{ startDate: string; endDate: string }>();
 
@@ -52,13 +54,15 @@ export class DateRangeFilterComponent implements OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['startDate'] || changes['endDate']) {
-      this.form.patchValue(
-        {
-          startDate: parseIsoDate(this.startDate),
-          endDate: parseIsoDate(this.endDate)
-        },
-        { emitEvent: false }
-      );
+      if (this.startDate && this.endDate) {
+        this.form.patchValue(
+          {
+            startDate: parseIsoDate(this.startDate),
+            endDate: parseIsoDate(this.endDate)
+          },
+          { emitEvent: false }
+        );
+      }
     }
 
     if (this.disabled) {
@@ -86,5 +90,26 @@ export class DateRangeFilterComponent implements OnChanges {
       startDate: toIsoLocalDate(startDate),
       endDate: toIsoLocalDate(endDate)
     });
+  }
+
+  onApplyPreset(days: number): void {
+    const today = new Date();
+    const startDate = new Date(today);
+    const endDate = new Date(today);
+
+    if (this.mode === 'past') {
+      startDate.setDate(today.getDate() - days + 1);
+    } else {
+      endDate.setDate(today.getDate() + days - 1);
+    }
+
+    this.form.patchValue(
+      {
+        startDate,
+        endDate
+      },
+      { emitEvent: false }
+    );
+    this.onApply();
   }
 }

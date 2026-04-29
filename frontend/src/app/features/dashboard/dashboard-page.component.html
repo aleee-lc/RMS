@@ -1,62 +1,151 @@
 ﻿<section class="page">
-  <h1>Dashboard RM</h1>
+  <div class="page-header">
+    <div class="page-title">
+      <h1>Dashboard operacional</h1>
+      <p>Lectura diaria de demanda, precio y riesgo de ejecucion.</p>
+    </div>
+
+    <div class="inline-actions">
+      <a mat-stroked-button routerLink="/reports">
+        <mat-icon>query_stats</mat-icon>
+        Ver reportes
+      </a>
+      <a mat-flat-button color="primary" routerLink="/recommendations">
+        <mat-icon>auto_fix_high</mat-icon>
+        Generar recomendaciones
+      </a>
+    </div>
+  </div>
+
   <app-date-range-filter
     [startDate]="dateRange().startDate"
     [endDate]="dateRange().endDate"
     [disabled]="loading()"
+    mode="past"
+    [showPresets]="true"
     (applyDateRange)="onDateRangeApply($event)"
   />
 
   <mat-progress-bar *ngIf="loading()" mode="indeterminate" />
 
-  <div class="kpi-grid">
-    <app-kpi-card
-      title="Ocupación Promedio"
-      [value]="(avgOccupancy() | number: '1.2-2') + '%'"
-      subtitle="Sobre el rango seleccionado"
-      icon="hotel"
-    />
-
-    <app-kpi-card
-      title="ADR Promedio"
-      [value]="(avgAdr() | currency: 'MXN' : 'symbol' : '1.2-2') ?? '-'"
-      subtitle="Tarifa diaria promedio"
-      icon="paid"
-    />
-
-    <app-kpi-card
-      title="Revenue Total"
-      [value]="(totalRevenue() | currency: 'MXN' : 'symbol' : '1.2-2') ?? '-'"
-      subtitle="Ingresos en el periodo"
-      icon="savings"
-    />
-
-    <app-kpi-card
-      title="Alertas Activas"
-      [value]="alerts().length.toString()"
-      subtitle="resolved = false"
-      icon="notification_important"
-    />
+  <div class="state-card" *ngIf="errorMessage() as error">
+    <strong>Error:</strong> {{ error }}
   </div>
 
-  <mat-card>
-    <mat-card-header>
-      <mat-card-title>Tendencia de Métricas</mat-card-title>
-      <mat-card-subtitle>Ocupación, ADR y Revenue por fecha</mat-card-subtitle>
-    </mat-card-header>
-    <mat-card-content>
-      <div class="chart-wrap" *ngIf="metrics().length; else noData">
-        <canvas
-          baseChart
-          [type]="chartType"
-          [data]="chartData()"
-          [options]="chartOptions"
-        ></canvas>
+  <mat-card class="section-card" *ngIf="statusToday() as status">
+    <mat-card-content class="status-layout">
+      <div class="status-main">
+        <span class="status-badge" [class.badge-ok]="status.tone === 'ok'" [class.badge-warn]="status.tone === 'warn'" [class.badge-info]="status.tone === 'info'">
+          Estado del dia
+        </span>
+        <h2>{{ status.title }}</h2>
+        <p>{{ status.message }}</p>
+      </div>
+
+      <div class="inline-actions">
+        <a mat-flat-button color="primary" [routerLink]="status.actionPath">
+          <mat-icon>arrow_forward</mat-icon>
+          {{ status.actionLabel }}
+        </a>
+        <a mat-stroked-button routerLink="/alerts">
+          <mat-icon>notifications_active</mat-icon>
+          Ver alertas
+        </a>
       </div>
     </mat-card-content>
   </mat-card>
 
+  <div class="kpi-grid" *ngIf="!loading(); else skeletonKpis">
+    <app-kpi-card
+      title="Ocupacion promedio"
+      [value]="(avgOccupancy() | number: '1.2-2') + '%'"
+      subtitle="Rango seleccionado"
+      icon="hotel"
+    />
+
+    <app-kpi-card
+      title="ADR promedio"
+      [value]="(avgAdr() | currency: 'MXN' : 'symbol' : '1.2-2') ?? '-'"
+      subtitle="Tarifa diaria"
+      icon="paid"
+    />
+
+    <app-kpi-card
+      title="RevPAR promedio"
+      [value]="(avgRevpar() | currency: 'MXN' : 'symbol' : '1.2-2') ?? '-'"
+      subtitle="Revenue por habitacion disponible"
+      icon="analytics"
+    />
+
+    <app-kpi-card
+      title="Revenue total"
+      [value]="(totalRevenue() | currency: 'MXN' : 'symbol' : '1.2-2') ?? '-'"
+      subtitle="Acumulado del periodo"
+      icon="savings"
+    />
+
+    <app-kpi-card
+      title="Alertas activas"
+      [value]="alerts().length.toString()"
+      subtitle="Triage pendiente"
+      icon="warning"
+    />
+  </div>
+
+  <ng-template #skeletonKpis>
+    <div class="kpi-grid">
+      <div class="skeleton kpi-skeleton" *ngFor="let _ of [1, 2, 3, 4]"></div>
+    </div>
+  </ng-template>
+
+  <div class="insight-grid">
+    <mat-card class="section-card">
+      <mat-card-header>
+        <mat-card-title>Tendencia de metricas</mat-card-title>
+        <mat-card-subtitle>Ocupacion, ADR y RevPAR por fecha</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="chart-wrap" *ngIf="metrics().length; else noData">
+          <canvas
+            baseChart
+            [type]="chartType"
+            [data]="chartData()"
+            [options]="chartOptions"
+          ></canvas>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="section-card">
+      <mat-card-header>
+        <mat-card-title>Alertas activas</mat-card-title>
+        <mat-card-subtitle>Top prioridad operacional</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <div *ngIf="topAlerts().length; else noAlerts" class="alerts-list">
+          <article class="alert-item" *ngFor="let alert of topAlerts()">
+            <div>
+              <strong>{{ alert.title }}</strong>
+              <p>{{ alert.message }}</p>
+            </div>
+            <span class="status-badge" [class.badge-danger]="alert.severity === 'high'" [class.badge-warn]="alert.severity === 'medium'" [class.badge-info]="alert.severity === 'low'">
+              {{ alert.severity | uppercase }}
+            </span>
+          </article>
+        </div>
+
+        <ng-template #noAlerts>
+          <div class="state-card">
+            <strong>Sin alertas activas.</strong> Buen momento para revisar oportunidad de ingresos.
+          </div>
+        </ng-template>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
   <ng-template #noData>
-    <div class="no-data">No hay datos para el rango seleccionado.</div>
+    <div class="state-card">
+      <strong>No hay datos para el rango seleccionado.</strong> Sube fuentes en Ingesta y reintenta.
+    </div>
   </ng-template>
 </section>

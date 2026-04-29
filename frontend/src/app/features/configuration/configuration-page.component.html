@@ -1,0 +1,250 @@
+﻿<section class="page">
+  <div class="page-header">
+    <div class="page-title">
+      <h1>Configuracion operativa</h1>
+      <p>Administra hoteles y competidores con validacion en tiempo real.</p>
+    </div>
+  </div>
+
+  <div class="summary-grid">
+    <article class="summary-tile">
+      <span>Hoteles</span>
+      <strong>{{ stats().hotels }}</strong>
+    </article>
+
+    <article class="summary-tile">
+      <span>Competidores</span>
+      <strong>{{ stats().competitors }}</strong>
+    </article>
+
+    <article class="summary-tile info">
+      <span>Hotel activo</span>
+      <strong>{{ stats().selectedHotel }}</strong>
+    </article>
+  </div>
+
+  <mat-progress-bar *ngIf="loadingHotels() || loadingCompetitors() || saving()" mode="indeterminate" />
+
+  <div class="state-card" *ngIf="hotelsError() as hotelsErrorMessage">
+    <strong>Error hoteles:</strong> {{ hotelsErrorMessage }}
+  </div>
+
+  <div class="state-card" *ngIf="competitorsError() as competitorsErrorMessage">
+    <strong>Error competidores:</strong> {{ competitorsErrorMessage }}
+  </div>
+
+  <div class="grid">
+    <mat-card class="section-card">
+      <mat-card-header>
+        <mat-card-title>Alta de hotel</mat-card-title>
+        <mat-card-subtitle>Crea propiedades nuevas para operar en RMS.</mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <form [formGroup]="createHotelForm" class="form-grid" novalidate>
+          <mat-form-field appearance="outline">
+            <mat-label>Codigo</mat-label>
+            <input matInput formControlName="code" maxlength="12" />
+            <mat-error *ngIf="createHotelForm.controls.code.touched && createHotelForm.controls.code.hasError('required')">
+              Ingresa el codigo del hotel.
+            </mat-error>
+            <mat-error *ngIf="createHotelForm.controls.code.touched && createHotelForm.controls.code.hasError('minlength')">
+              Minimo 2 caracteres.
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Nombre</mat-label>
+            <input matInput formControlName="name" maxlength="120" />
+            <mat-error *ngIf="createHotelForm.controls.name.touched && createHotelForm.controls.name.hasError('required')">
+              Ingresa el nombre comercial.
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Habitaciones totales</mat-label>
+            <input matInput type="number" formControlName="totalRooms" min="1" max="20000" />
+            <mat-error *ngIf="createHotelForm.controls.totalRooms.touched && createHotelForm.controls.totalRooms.hasError('min')">
+              Debe ser mayor a 0.
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Moneda</mat-label>
+            <input matInput formControlName="currency" maxlength="3" />
+            <mat-error *ngIf="createHotelForm.controls.currency.touched && createHotelForm.controls.currency.hasError('required')">
+              Codigo ISO de moneda obligatorio.
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Timezone</mat-label>
+            <input matInput formControlName="timezone" maxlength="80" />
+            <mat-error *ngIf="createHotelForm.controls.timezone.touched && createHotelForm.controls.timezone.hasError('required')">
+              Zona horaria requerida.
+            </mat-error>
+          </mat-form-field>
+        </form>
+      </mat-card-content>
+
+      <mat-card-actions>
+        <button
+          mat-flat-button
+          color="primary"
+          (click)="onCreateHotel()"
+          [disabled]="saving() || createHotelForm.invalid"
+        >
+          <mat-icon>add_business</mat-icon>
+          Crear hotel
+        </button>
+      </mat-card-actions>
+    </mat-card>
+
+    <mat-card class="section-card">
+      <mat-card-header>
+        <mat-card-title>Edicion de hotel</mat-card-title>
+        <mat-card-subtitle>Selecciona un hotel y actualiza su configuracion.</mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <mat-form-field appearance="outline" class="full">
+          <mat-label>Hotel</mat-label>
+          <mat-select [value]="selectedHotelId()" (selectionChange)="onHotelSelectionChange($event.value)">
+            <mat-option *ngFor="let hotel of hotels()" [value]="hotel.id">
+              {{ hotel.code }} - {{ hotel.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <form [formGroup]="updateHotelForm" class="form-grid" *ngIf="selectedHotel(); else noHotelSelected" novalidate>
+          <mat-form-field appearance="outline">
+            <mat-label>Codigo</mat-label>
+            <input matInput formControlName="code" maxlength="12" />
+            <mat-error *ngIf="updateHotelForm.controls.code.touched && updateHotelForm.controls.code.hasError('required')">
+              Codigo requerido.
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Nombre</mat-label>
+            <input matInput formControlName="name" maxlength="120" />
+            <mat-error *ngIf="updateHotelForm.controls.name.touched && updateHotelForm.controls.name.hasError('required')">
+              Nombre requerido.
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Habitaciones</mat-label>
+            <input matInput type="number" formControlName="totalRooms" min="1" max="20000" />
+            <mat-error *ngIf="updateHotelForm.controls.totalRooms.touched && updateHotelForm.controls.totalRooms.hasError('min')">
+              Debe ser mayor a 0.
+            </mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Moneda</mat-label>
+            <input matInput formControlName="currency" maxlength="3" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Timezone</mat-label>
+            <input matInput formControlName="timezone" maxlength="80" />
+          </mat-form-field>
+        </form>
+      </mat-card-content>
+
+      <mat-card-actions>
+        <button
+          mat-flat-button
+          color="primary"
+          (click)="onUpdateSelectedHotel()"
+          [disabled]="!selectedHotel() || saving() || updateHotelForm.invalid"
+        >
+          <mat-icon>save</mat-icon>
+          Guardar cambios
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  </div>
+
+  <mat-card class="section-card">
+    <mat-card-header>
+      <mat-card-title>Competidores</mat-card-title>
+      <mat-card-subtitle *ngIf="selectedHotel() as hotel">
+        Gestion para: {{ hotel.name }}
+      </mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <form [formGroup]="createCompetitorForm" class="competitor-create" novalidate>
+        <mat-form-field appearance="outline" class="name-field">
+          <mat-label>Nuevo competidor</mat-label>
+          <input matInput formControlName="name" maxlength="120" />
+          <mat-error *ngIf="createCompetitorForm.controls.name.touched && createCompetitorForm.controls.name.hasError('required')">
+            Ingresa nombre de competidor.
+          </mat-error>
+        </mat-form-field>
+
+        <button
+          mat-flat-button
+          color="primary"
+          type="button"
+          (click)="onCreateCompetitor()"
+          [disabled]="!selectedHotel() || saving() || createCompetitorForm.invalid"
+        >
+          <mat-icon>add</mat-icon>
+          Agregar
+        </button>
+      </form>
+
+      <div class="competitor-list" *ngIf="competitors().length; else noCompetitors">
+        <article class="competitor-row" *ngFor="let competitor of competitors()">
+          <mat-form-field appearance="outline" class="name-field">
+            <mat-label>Nombre</mat-label>
+            <input
+              matInput
+              [value]="competitorDrafts()[competitor.id]"
+              (input)="onCompetitorDraftChange(competitor.id, $any($event.target).value)"
+            />
+          </mat-form-field>
+
+          <button
+            mat-stroked-button
+            color="primary"
+            type="button"
+            (click)="onSaveCompetitor(competitor)"
+            [disabled]="!canSaveCompetitor(competitor)"
+          >
+            <mat-icon>edit</mat-icon>
+            Guardar
+          </button>
+
+          <button
+            mat-stroked-button
+            color="warn"
+            type="button"
+            (click)="onDeleteCompetitor(competitor)"
+            [disabled]="saving()"
+          >
+            <mat-icon>delete</mat-icon>
+            Eliminar
+          </button>
+        </article>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <ng-template #noHotelSelected>
+    <div class="state-card">
+      <strong>No hay hotel seleccionado.</strong>
+      Crea un hotel o selecciona uno para continuar.
+    </div>
+  </ng-template>
+
+  <ng-template #noCompetitors>
+    <div class="state-card">
+      <strong>No hay competidores registrados.</strong>
+      Agrega al menos uno para habilitar comparativa de mercado.
+    </div>
+  </ng-template>
+</section>

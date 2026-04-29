@@ -1,8 +1,10 @@
-<mat-card class="kpi-card">
+﻿<mat-card class="kpi-card">
   <mat-card-content>
     <div class="kpi-header">
       <span class="kpi-title">{{ title() }}</span>
-      <mat-icon>{{ icon() }}</mat-icon>
+      <span class="icon-wrap" aria-hidden="true">
+        <mat-icon>{{ icon() }}</mat-icon>
+      </span>
     </div>
     <div class="kpi-value">{{ value() }}</div>
     <div class="kpi-subtitle" *ngIf="subtitle()">{{ subtitle() }}</div>

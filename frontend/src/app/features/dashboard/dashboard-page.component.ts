@@ -1,6 +1,9 @@
 ﻿import { CommonModule } from '@angular/common';
 import { Component, computed, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { ChartConfiguration } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
@@ -32,7 +35,10 @@ function defaultRange(daysBack: number): DateRange {
   standalone: true,
   imports: [
     CommonModule,
+    RouterLink,
+    MatButtonModule,
     MatCardModule,
+    MatIconModule,
     MatProgressBarModule,
     BaseChartDirective,
     DateRangeFilterComponent,
@@ -43,13 +49,65 @@ function defaultRange(daysBack: number): DateRange {
 })
 export class DashboardPageComponent {
   readonly loading = signal(false);
+  readonly errorMessage = signal<string | null>(null);
   readonly dateRange = signal<DateRange>(defaultRange(29));
   readonly metrics = signal<MetricItem[]>([]);
   readonly alerts = signal<AlertItem[]>([]);
 
+  readonly latestMetric = computed(() => {
+    const items = this.metrics();
+    return items.length ? items[items.length - 1] : null;
+  });
+
   readonly avgOccupancy = computed(() => this.average(this.metrics().map((m) => m.occupancy)));
   readonly avgAdr = computed(() => this.average(this.metrics().map((m) => m.adr)));
+  readonly avgRevpar = computed(() => this.average(this.metrics().map((m) => m.revpar)));
   readonly totalRevenue = computed(() => this.metrics().reduce((sum, item) => sum + item.revenue, 0));
+
+  readonly statusToday = computed(() => {
+    const metric = this.latestMetric();
+    const activeAlerts = this.alerts().filter((item) => !item.resolved).length;
+
+    if (!metric) {
+      return {
+        title: 'Sin datos recientes',
+        message: 'Carga fuentes de datos para iniciar el ciclo de revenue.',
+        actionLabel: 'Ir a ingesta',
+        actionPath: '/upload',
+        tone: 'info'
+      };
+    }
+
+    if (activeAlerts > 0) {
+      return {
+        title: `Atencion inmediata: ${activeAlerts} alertas activas`,
+        message: 'Prioriza resolucion de alertas y confirma ejecucion de precio en canal.',
+        actionLabel: 'Ver alertas',
+        actionPath: '/alerts',
+        tone: 'warn'
+      };
+    }
+
+    if (metric.occupancy >= 75) {
+      return {
+        title: 'Demanda alta detectada',
+        message: 'Evalua incremento de tarifa y valida posicion competitiva.',
+        actionLabel: 'Generar recomendaciones',
+        actionPath: '/recommendations',
+        tone: 'ok'
+      };
+    }
+
+    return {
+      title: 'Operacion estable',
+      message: 'Monitorea pronostico vs OTB y conserva disciplina tarifaria.',
+      actionLabel: 'Revisar reportes',
+      actionPath: '/reports',
+      tone: 'info'
+    };
+  });
+
+  readonly topAlerts = computed(() => this.alerts().slice(0, 5));
 
   readonly chartData = computed<ChartConfiguration<'line'>['data']>(() => {
     const metrics = this.metrics();
@@ -58,10 +116,10 @@ export class DashboardPageComponent {
       datasets: [
         {
           data: metrics.map((item) => item.occupancy),
-          label: 'Ocupación %',
+          label: 'Ocupacion %',
           yAxisID: 'yOccupancy',
-          borderColor: '#0284c7',
-          backgroundColor: 'rgba(2, 132, 199, 0.18)',
+          borderColor: '#0d9488',
+          backgroundColor: 'rgba(13, 148, 136, 0.18)',
           tension: 0.25,
           fill: true
         },
@@ -69,16 +127,16 @@ export class DashboardPageComponent {
           data: metrics.map((item) => item.adr),
           label: 'ADR',
           yAxisID: 'yMoney',
-          borderColor: '#7c3aed',
-          backgroundColor: 'rgba(124, 58, 237, 0.15)',
+          borderColor: '#1d4ed8',
+          backgroundColor: 'rgba(29, 78, 216, 0.13)',
           tension: 0.25
         },
         {
-          data: metrics.map((item) => item.revenue),
-          label: 'Revenue',
+          data: metrics.map((item) => item.revpar),
+          label: 'RevPAR',
           yAxisID: 'yMoney',
-          borderColor: '#15803d',
-          backgroundColor: 'rgba(21, 128, 61, 0.15)',
+          borderColor: '#c2410c',
+          backgroundColor: 'rgba(194, 65, 12, 0.13)',
           tension: 0.25
         }
       ]
@@ -133,6 +191,7 @@ export class DashboardPageComponent {
   private refresh(dateRange: DateRange): void {
     this.dateRange.set(dateRange);
     this.loading.set(true);
+    this.errorMessage.set(null);
 
     forkJoin({
       metrics: this.metricsService.getMetrics(dateRange),
@@ -144,6 +203,7 @@ export class DashboardPageComponent {
         this.loading.set(false);
       },
       error: () => {
+        this.errorMessage.set('No se pudo cargar dashboard. Reintenta o valida conexion al backend.');
         this.loading.set(false);
       }
     });

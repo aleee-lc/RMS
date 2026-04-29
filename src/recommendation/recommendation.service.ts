@@ -4,25 +4,50 @@ import { AlertsService } from '../alerts/alerts.service';
 import { dateKey, enumerateDateRange, toUtcDateOnly } from '../common/utils/date.util';
 import { clamp, round2 } from '../common/utils/number.util';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  normalizeRecommendationSettings,
+  RecommendationSettingsConfig
+} from './recommendation-settings';
+
+export interface RecommendationGenerationOptions {
+  highOccupancyThreshold?: number;
+  lowOccupancyThreshold?: number;
+  significantDiffPct?: number;
+  demandWeight?: number;
+  marketWeight?: number;
+  maxAdjustmentPct?: number;
+  minActionStepPct?: number;
+}
 
 @Injectable()
 export class RecommendationService {
-  private readonly highOccupancyThreshold = 70;
-  private readonly lowOccupancyThreshold = 30;
-  private readonly significantDiffPct = 10;
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly alertsService: AlertsService
   ) {}
 
+  async getRecommendations(hotelId: number, startDate: Date, endDate: Date): Promise<Recommendations[]> {
+    return this.prisma.recommendations.findMany({
+      where: {
+        hotelId,
+        date: {
+          gte: toUtcDateOnly(startDate),
+          lte: toUtcDateOnly(endDate)
+        }
+      },
+      orderBy: { date: 'asc' }
+    });
+  }
+
   async generateAndPersistRecommendations(
     hotelId: number,
     startDate: Date,
-    endDate: Date
+    endDate: Date,
+    options?: RecommendationGenerationOptions
   ): Promise<Recommendations[]> {
     const normalizedStart = toUtcDateOnly(startDate);
     const normalizedEnd = toUtcDateOnly(endDate);
+    const config = await this.resolveGenerationConfig(hotelId, options);
 
     const [metrics, marketRates] = await Promise.all([
       this.prisma.dailyMetrics.findMany({
@@ -72,10 +97,10 @@ export class RecommendationService {
       const priceDiffPct =
         marketAverage > 0 ? ((yourPrice - marketAverage) / marketAverage) * 100 : 0;
 
-      const highDemand = occupancy > this.highOccupancyThreshold;
-      const lowDemand = occupancy < this.lowOccupancyThreshold;
-      const underpriced = priceDiffPct < -this.significantDiffPct;
-      const overpriced = priceDiffPct > this.significantDiffPct;
+      const highDemand = occupancy > config.highOccupancyThreshold;
+      const lowDemand = occupancy < config.lowOccupancyThreshold;
+      const underpriced = priceDiffPct < -config.significantDiffPct;
+      const overpriced = priceDiffPct > config.significantDiffPct;
 
       let action: RecommendationAction = RecommendationAction.HOLD;
       if (highDemand && underpriced) {
@@ -89,15 +114,21 @@ export class RecommendationService {
         marketAverage > 0 ? clamp((marketAverage - yourPrice) / marketAverage, -0.2, 0.2) : 0;
 
       const basePrice = yourPrice || marketAverage || adr;
+      const adjustmentFactor = clamp(
+        demandFactor * config.demandWeight + marketPositioningFactor * config.marketWeight,
+        -(config.maxAdjustmentPct / 100),
+        config.maxAdjustmentPct / 100
+      );
       let suggestedPrice = round2(
-        basePrice * (1 + clamp(demandFactor * 0.5 + marketPositioningFactor * 0.6, -0.2, 0.2))
+        basePrice * (1 + adjustmentFactor)
       );
 
+      const minimumStepFactor = config.minActionStepPct / 100;
       if (action === RecommendationAction.INCREASE && suggestedPrice <= basePrice) {
-        suggestedPrice = round2(basePrice * 1.05);
+        suggestedPrice = round2(basePrice * (1 + minimumStepFactor));
       }
       if (action === RecommendationAction.DECREASE && suggestedPrice >= basePrice) {
-        suggestedPrice = round2(basePrice * 0.95);
+        suggestedPrice = round2(basePrice * (1 - minimumStepFactor));
       }
 
       const explanation = this.buildExplanation({
@@ -106,7 +137,8 @@ export class RecommendationService {
         marketAverage,
         priceDiffPct,
         action,
-        suggestedPrice
+        suggestedPrice,
+        config
       });
 
       const recommendation = await this.prisma.recommendations.upsert({
@@ -157,19 +189,44 @@ export class RecommendationService {
     priceDiffPct: number;
     action: RecommendationAction;
     suggestedPrice: number;
+    config: RecommendationSettingsConfig;
   }): string {
     const occupancyText = `${input.occupancy.toFixed(1)}%`;
     const gapText = `${input.priceDiffPct.toFixed(1)}%`;
 
     if (input.action === RecommendationAction.INCREASE) {
-      return `High demand (${occupancyText} occupancy > ${this.highOccupancyThreshold}%) and underpricing (${gapText} vs market) support an increase to ${input.suggestedPrice.toFixed(2)}.`;
+      return `High demand (${occupancyText} occupancy > ${input.config.highOccupancyThreshold}%) and underpricing (${gapText} vs market threshold ${input.config.significantDiffPct}%) support an increase to ${input.suggestedPrice.toFixed(2)}.`;
     }
 
     if (input.action === RecommendationAction.DECREASE) {
-      return `Low demand (${occupancyText} occupancy < ${this.lowOccupancyThreshold}%) and overpricing (${gapText} vs market) support a decrease to ${input.suggestedPrice.toFixed(2)}.`;
+      return `Low demand (${occupancyText} occupancy < ${input.config.lowOccupancyThreshold}%) and overpricing (${gapText} vs market threshold ${input.config.significantDiffPct}%) support a decrease to ${input.suggestedPrice.toFixed(2)}.`;
     }
 
-    return `Current demand (${occupancyText}) and price position (${gapText} vs market) do not exceed thresholds; hold at ${input.suggestedPrice.toFixed(2)}.`;
+    return `Current demand (${occupancyText}) and price position (${gapText} vs market) do not exceed configured thresholds; hold at ${input.suggestedPrice.toFixed(2)}.`;
+  }
+
+  private async resolveGenerationConfig(
+    hotelId: number,
+    options?: RecommendationGenerationOptions
+  ): Promise<RecommendationSettingsConfig> {
+    const persisted = await this.prisma.recommendationSettings.findUnique({
+      where: { hotelId }
+    });
+
+    return normalizeRecommendationSettings({
+      ...(persisted
+        ? {
+            highOccupancyThreshold: Number(persisted.highOccupancyThreshold),
+            lowOccupancyThreshold: Number(persisted.lowOccupancyThreshold),
+            significantDiffPct: Number(persisted.significantDiffPct),
+            demandWeight: Number(persisted.demandWeight),
+            marketWeight: Number(persisted.marketWeight),
+            maxAdjustmentPct: Number(persisted.maxAdjustmentPct),
+            minActionStepPct: Number(persisted.minActionStepPct)
+          }
+        : {}),
+      ...(options ?? {})
+    });
   }
 
   private average(values: number[]): number {

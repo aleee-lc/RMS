@@ -17,3 +17,16 @@
     Aplicar
   </button>
 </form>
+
+<div class="preset-row" *ngIf="showPresets">
+  <span class="preset-label">Atajos:</span>
+  <button mat-stroked-button type="button" (click)="onApplyPreset(7)" [disabled]="disabled">
+    {{ mode === 'past' ? 'Ultimos 7 dias' : 'Proximos 7 dias' }}
+  </button>
+  <button mat-stroked-button type="button" (click)="onApplyPreset(30)" [disabled]="disabled">
+    {{ mode === 'past' ? 'Ultimos 30 dias' : 'Proximos 30 dias' }}
+  </button>
+  <button mat-stroked-button type="button" (click)="onApplyPreset(90)" [disabled]="disabled">
+    {{ mode === 'past' ? 'Ultimos 90 dias' : 'Proximos 90 dias' }}
+  </button>
+</div>

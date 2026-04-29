@@ -1,57 +1,116 @@
-<section class="page">
-  <h1>Ingesta de Datos</h1>
-  <p class="subtitle">Sube archivos XML y Excel para actualizar métricas y recomendaciones.</p>
+ï»¿<section class="page">
+  <div class="page-header">
+    <div class="page-title">
+      <h1>Ingesta de datos</h1>
+      <p>Carga informacion de PMS/CRS y mercado en un flujo guiado.</p>
+    </div>
+  </div>
 
-  <div class="grid">
-    <mat-card>
-      <mat-card-header>
-        <mat-card-title>XML de Opera</mat-card-title>
-        <mat-card-subtitle>Reservation Entered On / History & Forecast</mat-card-subtitle>
-      </mat-card-header>
-      <mat-card-content>
-        <p>Formato soportado: <code>.xml</code></p>
-        <input #xmlInput type="file" accept=".xml" hidden (change)="onXmlFileSelected($event)" />
-        <button mat-flat-button color="primary" (click)="xmlInput.click()" [disabled]="xmlUploading()">
-          <mat-icon>upload_file</mat-icon>
-          Subir XML
-        </button>
-        <mat-progress-bar *ngIf="xmlUploading()" mode="indeterminate"></mat-progress-bar>
-      </mat-card-content>
-      <mat-card-content *ngIf="xmlResult() as result" class="result">
-        <h3>Resultado</h3>
-        <pre>{{ result | json }}</pre>
-      </mat-card-content>
-    </mat-card>
+  <mat-card class="section-card">
+    <mat-card-content class="wizard-grid">
+      <article class="step">
+        <header>
+          <small>Paso 1</small>
+          <h2>Selecciona fuente</h2>
+        </header>
 
-    <mat-card>
-      <mat-card-header>
-        <mat-card-title>Excel de Mercado</mat-card-title>
-        <mat-card-subtitle>Expedia Price Grid</mat-card-subtitle>
-      </mat-card-header>
-      <mat-card-content>
-        <p>Formato soportado: <code>.xlsx</code> / <code>.xls</code></p>
+        <mat-button-toggle-group
+          [value]="selectedType()"
+          (change)="onTypeChange($event.value)"
+          aria-label="Tipo de archivo"
+        >
+          <mat-button-toggle value="xml">
+            <mat-icon>description</mat-icon>
+            XML Opera/CRS
+          </mat-button-toggle>
+          <mat-button-toggle value="excel">
+            <mat-icon>table_view</mat-icon>
+            Excel Expedia
+          </mat-button-toggle>
+        </mat-button-toggle-group>
+      </article>
+
+      <article class="step">
+        <header>
+          <small>Paso 2</small>
+          <h2>Valida archivo</h2>
+        </header>
+
+        <p class="hint" *ngIf="selectedType() === 'xml'">Acepta reportes XML de reservas, historico/pronostico y distribucion CRS.</p>
+        <p class="hint" *ngIf="selectedType() === 'excel'">Acepta grilla de precios Expedia en formato .xlsx o .xls.</p>
+
         <input
-          #excelInput
+          #fileInput
           type="file"
-          accept=".xlsx,.xls"
+          [accept]="selectedType() === 'xml' ? '.xml' : '.xlsx,.xls'"
           hidden
-          (change)="onExcelFileSelected($event)"
+          (change)="onFileSelected($event)"
         />
+
+        <div class="inline-actions">
+          <button mat-stroked-button type="button" (click)="fileInput.click()" [disabled]="uploading()">
+            <mat-icon>attach_file</mat-icon>
+            Seleccionar archivo
+          </button>
+          <span class="file-name" *ngIf="selectedFile() as file">{{ file.name }}</span>
+        </div>
+
+        <ul class="check-list">
+          <li *ngFor="let check of validationItems()" [class.ok]="check.ok" [class.fail]="!check.ok">
+            <mat-icon>{{ check.ok ? 'check_circle' : 'cancel' }}</mat-icon>
+            <span>{{ check.label }}</span>
+          </li>
+        </ul>
+      </article>
+
+      <article class="step">
+        <header>
+          <small>Paso 3</small>
+          <h2>Procesa carga</h2>
+        </header>
+
         <button
           mat-flat-button
           color="primary"
-          (click)="excelInput.click()"
-          [disabled]="excelUploading()"
+          type="button"
+          (click)="onUpload()"
+          [disabled]="uploading() || !canUpload()"
         >
-          <mat-icon>table_view</mat-icon>
-          Subir Excel
+          <mat-icon>cloud_upload</mat-icon>
+          {{ uploading() ? 'Procesando...' : 'Subir archivo' }}
         </button>
-        <mat-progress-bar *ngIf="excelUploading()" mode="indeterminate"></mat-progress-bar>
-      </mat-card-content>
-      <mat-card-content *ngIf="excelResult() as result" class="result">
-        <h3>Resultado</h3>
-        <pre>{{ result | json }}</pre>
-      </mat-card-content>
-    </mat-card>
-  </div>
+
+        <mat-progress-bar *ngIf="uploading()" mode="indeterminate"></mat-progress-bar>
+
+        <div class="state-card" *ngIf="errorMessage() as error">
+          <strong>Error:</strong> {{ error }}
+        </div>
+      </article>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="section-card" *ngIf="lastResult() as result">
+    <mat-card-header>
+      <mat-card-title>Resumen de procesamiento</mat-card-title>
+      <mat-card-subtitle>Resultado listo para auditoria operativa</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="summary-grid">
+        <div class="summary-item" *ngFor="let row of resultSummaryRows(result)">
+          <span>{{ row.label }}</span>
+          <strong>{{ row.value }}</strong>
+        </div>
+      </div>
+
+      <div class="inline-actions">
+        <button mat-button type="button" (click)="toggleRawResult()">
+          <mat-icon>{{ showRawResult() ? 'expand_less' : 'expand_more' }}</mat-icon>
+          {{ showRawResult() ? 'Ocultar detalle tecnico' : 'Ver detalle tecnico' }}
+        </button>
+      </div>
+
+      <pre *ngIf="showRawResult()">{{ result | json }}</pre>
+    </mat-card-content>
+  </mat-card>
 </section>

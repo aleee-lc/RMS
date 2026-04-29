@@ -1,30 +1,93 @@
-<section class="page">
-  <h1>Alertas</h1>
+ï»¿<section class="page">
+  <div class="page-header">
+    <div class="page-title">
+      <h1>Bandeja de alertas</h1>
+      <p>Triage de riesgo y seguimiento de ejecucion de recomendaciones.</p>
+    </div>
+
+    <div class="inline-actions">
+      <button mat-stroked-button color="primary" (click)="onResolvedFilterChange('false')">
+        <mat-icon>notifications_active</mat-icon>
+        Solo activas
+      </button>
+      <button mat-button (click)="onResolvedFilterChange('all')">Limpiar filtro</button>
+    </div>
+  </div>
 
   <div class="filters">
     <app-date-range-filter
       [startDate]="dateRange().startDate"
       [endDate]="dateRange().endDate"
       [disabled]="loading()"
+      mode="past"
+      [showPresets]="true"
       (applyDateRange)="onDateRangeApply($event)"
     />
 
-    <mat-form-field appearance="outline" class="resolved-field">
-      <mat-label>Estado</mat-label>
-      <mat-select [formControl]="filterForm.controls.resolved">
-        <mat-option value="all">Todas</mat-option>
-        <mat-option value="false">Activas</mat-option>
-        <mat-option value="true">Resueltas</mat-option>
-      </mat-select>
-    </mat-form-field>
+    <div class="filter-side">
+      <mat-form-field appearance="outline">
+        <mat-label>Estado</mat-label>
+        <mat-select [ngModel]="resolvedFilter()" (ngModelChange)="onResolvedFilterChange($event)">
+          <mat-option value="all">Todas</mat-option>
+          <mat-option value="false">Activas</mat-option>
+          <mat-option value="true">Resueltas</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Severidad</mat-label>
+        <mat-select [ngModel]="severityFilter()" (ngModelChange)="severityFilter.set($event)">
+          <mat-option value="all">Todas</mat-option>
+          <mat-option value="high">High</mat-option>
+          <mat-option value="medium">Medium</mat-option>
+          <mat-option value="low">Low</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="search-field">
+        <mat-label>Buscar</mat-label>
+        <input matInput [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)" placeholder="Titulo o mensaje" />
+      </mat-form-field>
+    </div>
   </div>
 
   <mat-progress-bar *ngIf="loading()" mode="indeterminate" />
 
-  <mat-card>
+  <div class="state-card" *ngIf="errorMessage() as error">
+    <strong>Error:</strong> {{ error }}
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-item">
+      <span>Total</span>
+      <strong>{{ summary().total }}</strong>
+    </div>
+    <div class="summary-item active">
+      <span>Activas</span>
+      <strong>{{ summary().active }}</strong>
+    </div>
+    <div class="summary-item resolved">
+      <span>Resueltas</span>
+      <strong>{{ summary().resolved }}</strong>
+    </div>
+    <div class="summary-item high">
+      <span>High</span>
+      <strong>{{ summary().high }}</strong>
+    </div>
+    <div class="summary-item medium">
+      <span>Medium</span>
+      <strong>{{ summary().medium }}</strong>
+    </div>
+    <div class="summary-item low">
+      <span>Low</span>
+      <strong>{{ summary().low }}</strong>
+    </div>
+  </div>
+
+  <mat-card class="section-card">
     <mat-card-content>
-      <div class="table-wrap" *ngIf="items().length; else emptyState">
-        <table mat-table [dataSource]="items()" class="full-width">
+      <div class="table-wrap" *ngIf="visibleItems().length; else emptyState">
+        <table mat-table [dataSource]="visibleItems()" class="full-width data-table">
           <ng-container matColumnDef="date">
             <th mat-header-cell *matHeaderCellDef>Fecha</th>
             <td mat-cell *matCellDef="let row">{{ row.date }}</td>
@@ -40,8 +103,8 @@
           </ng-container>
 
           <ng-container matColumnDef="title">
-            <th mat-header-cell *matHeaderCellDef>Título</th>
-            <td mat-cell *matCellDef="let row">{{ row.title }}</td>
+            <th mat-header-cell *matHeaderCellDef>Titulo</th>
+            <td mat-cell *matCellDef="let row"><strong>{{ row.title }}</strong></td>
           </ng-container>
 
           <ng-container matColumnDef="message">
@@ -50,8 +113,23 @@
           </ng-container>
 
           <ng-container matColumnDef="resolved">
-            <th mat-header-cell *matHeaderCellDef>Resuelta</th>
-            <td mat-cell *matCellDef="let row">{{ row.resolved ? 'Sí' : 'No' }}</td>
+            <th mat-header-cell *matHeaderCellDef>Estado</th>
+            <td mat-cell *matCellDef="let row">{{ row.resolved ? 'Resuelta' : 'Activa' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef>Acciones</th>
+            <td mat-cell *matCellDef="let row">
+              <button
+                mat-stroked-button
+                color="primary"
+                (click)="onToggleResolved(row)"
+                [disabled]="isToggling(row.id)"
+              >
+                <mat-icon>{{ row.resolved ? 'settings_backup_restore' : 'task_alt' }}</mat-icon>
+                {{ row.resolved ? 'Reactivar' : 'Resolver' }}
+              </button>
+            </td>
           </ng-container>
 
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
@@ -62,6 +140,9 @@
   </mat-card>
 
   <ng-template #emptyState>
-    <div class="empty">No hay alertas para los filtros actuales.</div>
+    <div class="state-card">
+      <strong>No hay alertas para los filtros actuales.</strong>
+      Ajusta estado, severidad o rango de fechas.
+    </div>
   </ng-template>
 </section>

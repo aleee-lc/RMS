@@ -24,6 +24,18 @@ export class ApiService {
     });
   }
 
+  patch<T>(path: string, body: unknown, queryParams?: Record<string, QueryParamValue>): Observable<T> {
+    return this.http.patch<T>(`${this.baseUrl}${path}`, body, {
+      params: this.toHttpParams(queryParams)
+    });
+  }
+
+  delete<T>(path: string, queryParams?: Record<string, QueryParamValue>): Observable<T> {
+    return this.http.delete<T>(`${this.baseUrl}${path}`, {
+      params: this.toHttpParams(queryParams)
+    });
+  }
+
   private toHttpParams(queryParams?: Record<string, QueryParamValue>): HttpParams {
     let params = new HttpParams();
 

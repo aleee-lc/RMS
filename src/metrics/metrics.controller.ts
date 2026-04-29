@@ -3,6 +3,7 @@ import { DateRangeQueryDto } from '../common/dto/date-range-query.dto';
 import { HotelContextService } from '../common/hotel-context.service';
 import { parseIsoDate, toUtcDateOnly } from '../common/utils/date.util';
 import { MetricsService } from './metrics.service';
+import { calculateRevpar } from './metrics.util';
 
 @Controller('metrics')
 export class MetricsController {
@@ -36,7 +37,8 @@ export class MetricsController {
         occupancy: Number(m.occupancy),
         adr: Number(m.adr),
         revenue: Number(m.revenue),
-        booked_rooms: m.bookedRooms
+        booked_rooms: m.bookedRooms,
+        revpar: calculateRevpar(Number(m.revenue), hotel.totalRooms)
       }))
     };
   }

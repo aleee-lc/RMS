@@ -8,6 +8,9 @@ import { MarketModule } from './market/market.module';
 import { RecommendationModule } from './recommendation/recommendation.module';
 import { AlertsModule } from './alerts/alerts.module';
 import { ReportsModule } from './reports/reports.module';
+import { HotelsModule } from './hotels/hotels.module';
+import { CompetitorsModule } from './competitors/competitors.module';
+import { RateShoppingModule } from './rate-shopping/rate-shopping.module';
 
 @Module({
   imports: [
@@ -19,7 +22,10 @@ import { ReportsModule } from './reports/reports.module';
     MarketModule,
     RecommendationModule,
     AlertsModule,
-    ReportsModule
+    ReportsModule,
+    HotelsModule,
+    CompetitorsModule,
+    RateShoppingModule
   ]
 })
 export class AppModule {}

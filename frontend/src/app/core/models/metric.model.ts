@@ -4,6 +4,7 @@ export interface MetricItem {
   adr: number;
   revenue: number;
   booked_rooms: number;
+  revpar: number;
 }
 
 export interface MetricsResponse {

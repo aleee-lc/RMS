@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AlertsResponse } from '../models/alert.model';
+import { AlertItemResponse, AlertsResponse } from '../models/alert.model';
 import { DateRange } from '../models/date-range.model';
 import { ApiService } from './api.service';
 
@@ -21,5 +21,13 @@ export class AlertsService {
       endDate: options.endDate,
       resolved: options.resolved
     });
+  }
+
+  resolveAlert(alertId: number, hotelId = environment.defaultHotelId): Observable<AlertItemResponse> {
+    return this.api.patch<AlertItemResponse>(`/alerts/${alertId}/resolve`, {}, { hotelId });
+  }
+
+  activateAlert(alertId: number, hotelId = environment.defaultHotelId): Observable<AlertItemResponse> {
+    return this.api.patch<AlertItemResponse>(`/alerts/${alertId}/activate`, {}, { hotelId });
   }
 }

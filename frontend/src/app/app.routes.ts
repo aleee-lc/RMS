@@ -1,7 +1,9 @@
-import { Routes } from '@angular/router';
+﻿import { Routes } from '@angular/router';
 import { AlertsPageComponent } from './features/alerts/alerts-page.component';
+import { ConfigurationPageComponent } from './features/configuration/configuration-page.component';
 import { DashboardPageComponent } from './features/dashboard/dashboard-page.component';
 import { RecommendationsPageComponent } from './features/recommendations/recommendations-page.component';
+import { ReportsPageComponent } from './features/reports/reports-page.component';
 import { UploadPageComponent } from './features/upload/upload-page.component';
 
 export const routes: Routes = [
@@ -13,7 +15,7 @@ export const routes: Routes = [
   {
     path: 'dashboard',
     component: DashboardPageComponent,
-    title: 'Dashboard RM'
+    title: 'Dashboard'
   },
   {
     path: 'upload',
@@ -23,7 +25,7 @@ export const routes: Routes = [
   {
     path: 'recommendations',
     component: RecommendationsPageComponent,
-    title: 'Recomendaciones'
+    title: 'Recomendaciones de Precio'
   },
   {
     path: 'alerts',
@@ -31,7 +33,18 @@ export const routes: Routes = [
     title: 'Alertas'
   },
   {
+    path: 'reports',
+    component: ReportsPageComponent,
+    title: 'Reportes'
+  },
+  {
+    path: 'configuration',
+    component: ConfigurationPageComponent,
+    title: 'Configuracion'
+  },
+  {
     path: '**',
     redirectTo: 'dashboard'
   }
 ];
+

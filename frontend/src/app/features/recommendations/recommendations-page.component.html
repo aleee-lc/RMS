@@ -1,62 +1,244 @@
-<section class="page">
-  <div class="header">
-    <div>
-      <h1>Recomendaciones</h1>
-      <p>Acciones de pricing por día según ocupación e índice de mercado.</p>
+ï»¿<section class="page">
+  <div class="page-header">
+    <div class="page-title">
+      <h1>Recomendaciones de precio</h1>
+      <p>Prioriza decisiones con impacto esperado y posicion de mercado.</p>
     </div>
 
-    <button mat-flat-button color="primary" (click)="onRefreshClick()" [disabled]="loading()">
-      <mat-icon>refresh</mat-icon>
-      Refresh
-    </button>
+    <div class="inline-actions">
+      <button mat-stroked-button color="primary" (click)="onRefreshClick()" [disabled]="loading() || generating()">
+        <mat-icon>refresh</mat-icon>
+        Consultar
+      </button>
+      <button
+        mat-flat-button
+        color="primary"
+        (click)="onGenerateClick()"
+        [disabled]="loading() || generating() || !!generationConfigError()"
+      >
+        <mat-icon>auto_fix_high</mat-icon>
+        Generar
+      </button>
+    </div>
   </div>
 
   <app-date-range-filter
     [startDate]="dateRange().startDate"
     [endDate]="dateRange().endDate"
-    [disabled]="loading()"
+    [disabled]="loading() || generating()"
+    mode="future"
+    [showPresets]="true"
     (applyDateRange)="onDateRangeApply($event)"
   />
 
-  <mat-progress-bar *ngIf="loading()" mode="indeterminate" />
+  <mat-progress-bar *ngIf="loading() || generating()" mode="indeterminate" />
 
-  <mat-card>
+  <div class="state-card" *ngIf="errorMessage() as error">
+    <strong>Error:</strong> {{ error }}
+  </div>
+
+  <mat-card class="section-card">
+    <mat-card-content class="config-grid">
+      <div class="config-header">
+        <h2>Parametros de generacion</h2>
+        <p>Ajusta umbrales de diferencia y sensibilidad antes de generar.</p>
+      </div>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Ocupacion alta (%)</mat-label>
+        <input
+          matInput
+          type="number"
+          min="0"
+          max="100"
+          [ngModel]="generationOptions().highOccupancyThreshold"
+          (ngModelChange)="onGenerationOptionChange('highOccupancyThreshold', +$event)"
+        />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Ocupacion baja (%)</mat-label>
+        <input
+          matInput
+          type="number"
+          min="0"
+          max="100"
+          [ngModel]="generationOptions().lowOccupancyThreshold"
+          (ngModelChange)="onGenerationOptionChange('lowOccupancyThreshold', +$event)"
+        />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Diferencia mercado (%)</mat-label>
+        <input
+          matInput
+          type="number"
+          min="0"
+          max="100"
+          [ngModel]="generationOptions().significantDiffPct"
+          (ngModelChange)="onGenerationOptionChange('significantDiffPct', +$event)"
+        />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Peso demanda</mat-label>
+        <input
+          matInput
+          type="number"
+          min="0"
+          max="2"
+          step="0.1"
+          [ngModel]="generationOptions().demandWeight"
+          (ngModelChange)="onGenerationOptionChange('demandWeight', +$event)"
+        />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Peso mercado</mat-label>
+        <input
+          matInput
+          type="number"
+          min="0"
+          max="2"
+          step="0.1"
+          [ngModel]="generationOptions().marketWeight"
+          (ngModelChange)="onGenerationOptionChange('marketWeight', +$event)"
+        />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Ajuste maximo (%)</mat-label>
+        <input
+          matInput
+          type="number"
+          min="1"
+          max="40"
+          [ngModel]="generationOptions().maxAdjustmentPct"
+          (ngModelChange)="onGenerationOptionChange('maxAdjustmentPct', +$event)"
+        />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Paso minimo accion (%)</mat-label>
+        <input
+          matInput
+          type="number"
+          min="0.5"
+          max="20"
+          step="0.5"
+          [ngModel]="generationOptions().minActionStepPct"
+          (ngModelChange)="onGenerationOptionChange('minActionStepPct', +$event)"
+        />
+      </mat-form-field>
+
+      <div class="inline-actions config-actions">
+        <button mat-stroked-button type="button" (click)="onResetGenerationOptions()">
+          <mat-icon>restart_alt</mat-icon>
+          Restaurar defaults
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <div class="state-card" *ngIf="generationConfigError() as configError">
+    <strong>Configuracion invalida:</strong> {{ configError }}
+  </div>
+
+  <div class="summary-cards">
+    <div class="summary-tile">
+      <span>Total</span>
+      <strong>{{ actionSummary().total }}</strong>
+    </div>
+    <div class="summary-tile ok">
+      <span>Increase</span>
+      <strong>{{ actionSummary().increase }}</strong>
+    </div>
+    <div class="summary-tile warn">
+      <span>Decrease</span>
+      <strong>{{ actionSummary().decrease }}</strong>
+    </div>
+    <div class="summary-tile info">
+      <span>Hold</span>
+      <strong>{{ actionSummary().hold }}</strong>
+    </div>
+  </div>
+
+  <mat-card class="section-card">
+    <mat-card-content class="filter-grid">
+      <div>
+        <label>Filtro accion</label>
+        <mat-button-toggle-group [value]="actionFilter()" (change)="actionFilter.set($event.value)">
+          <mat-button-toggle value="all">Todos</mat-button-toggle>
+          <mat-button-toggle value="increase">Increase</mat-button-toggle>
+          <mat-button-toggle value="decrease">Decrease</mat-button-toggle>
+          <mat-button-toggle value="hold">Hold</mat-button-toggle>
+        </mat-button-toggle-group>
+      </div>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Ocupacion minima (%)</mat-label>
+        <input matInput type="number" [ngModel]="minOccupancyFilter()" (ngModelChange)="minOccupancyFilter.set(+$event || 0)" />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Posicion de mercado</mat-label>
+        <mat-select [ngModel]="marketFilter()" (ngModelChange)="marketFilter.set($event)">
+          <mat-option value="all">Todos</mat-option>
+          <mat-option value="under_market">Bajo mercado</mat-option>
+          <mat-option value="over_market">Sobre mercado</mat-option>
+          <mat-option value="near_market">Alineado</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="section-card">
     <mat-card-content>
-      <div class="table-wrap" *ngIf="items().length; else emptyState">
-        <table mat-table [dataSource]="items()" class="full-width">
+      <div class="table-wrap" *ngIf="filteredItems().length; else emptyState">
+        <table mat-table [dataSource]="filteredItems()" class="full-width data-table">
           <ng-container matColumnDef="date">
             <th mat-header-cell *matHeaderCellDef>Fecha</th>
             <td mat-cell *matCellDef="let row">{{ row.date }}</td>
           </ng-container>
 
           <ng-container matColumnDef="action">
-            <th mat-header-cell *matHeaderCellDef>Acción</th>
+            <th mat-header-cell *matHeaderCellDef>Accion</th>
             <td mat-cell *matCellDef="let row"><app-action-badge [action]="row.action" /></td>
           </ng-container>
 
-          <ng-container matColumnDef="suggested_price">
-            <th mat-header-cell *matHeaderCellDef>Precio Sugerido</th>
-            <td mat-cell *matCellDef="let row">{{ row.suggested_price | currency: 'MXN' }}</td>
-          </ng-container>
-
-          <ng-container matColumnDef="occupancy">
-            <th mat-header-cell *matHeaderCellDef>Ocupación</th>
-            <td mat-cell *matCellDef="let row">{{ row.occupancy | number: '1.2-2' }}%</td>
-          </ng-container>
-
-          <ng-container matColumnDef="your_price">
-            <th mat-header-cell *matHeaderCellDef>Tu Precio</th>
+          <ng-container matColumnDef="current_price">
+            <th mat-header-cell *matHeaderCellDef>Precio actual</th>
             <td mat-cell *matCellDef="let row">{{ row.your_price | currency: 'MXN' }}</td>
           </ng-container>
 
-          <ng-container matColumnDef="market_average">
-            <th mat-header-cell *matHeaderCellDef>Promedio Mercado</th>
-            <td mat-cell *matCellDef="let row">{{ row.market_average | currency: 'MXN' }}</td>
+          <ng-container matColumnDef="suggested_price">
+            <th mat-header-cell *matHeaderCellDef>Precio sugerido</th>
+            <td mat-cell *matCellDef="let row">{{ row.suggested_price | currency: 'MXN' }}</td>
           </ng-container>
 
-          <ng-container matColumnDef="explanation">
-            <th mat-header-cell *matHeaderCellDef>Explicación</th>
-            <td mat-cell *matCellDef="let row" class="explanation">{{ row.explanation }}</td>
+          <ng-container matColumnDef="delta">
+            <th mat-header-cell *matHeaderCellDef>Diferencia</th>
+            <td mat-cell *matCellDef="let row">{{ row.delta | currency: 'MXN' : 'symbol' : '1.2-2' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="delta_pct">
+            <th mat-header-cell *matHeaderCellDef>Diferencia %</th>
+            <td mat-cell *matCellDef="let row">{{ row.deltaPct | number: '1.1-1' }}%</td>
+          </ng-container>
+
+          <ng-container matColumnDef="estimated_impact">
+            <th mat-header-cell *matHeaderCellDef>Impacto estimado</th>
+            <td mat-cell *matCellDef="let row">{{ row.estimatedImpact | currency: 'MXN' : 'symbol' : '1.2-2' }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="occupancy">
+            <th mat-header-cell *matHeaderCellDef>Ocupacion</th>
+            <td mat-cell *matCellDef="let row">{{ row.occupancy | number: '1.2-2' }}%</td>
+          </ng-container>
+
+          <ng-container matColumnDef="market_position">
+            <th mat-header-cell *matHeaderCellDef>Posicion</th>
+            <td mat-cell *matCellDef="let row">{{ marketPositionLabel(row.marketPosition) }}</td>
           </ng-container>
 
           <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
@@ -67,6 +249,9 @@
   </mat-card>
 
   <ng-template #emptyState>
-    <div class="empty">No hay recomendaciones para el rango seleccionado.</div>
+    <div class="state-card">
+      <strong>No hay recomendaciones para el filtro actual.</strong>
+      Genera nuevo horizonte o relaja filtros de accion/ocupacion.
+    </div>
   </ng-template>
 </section>

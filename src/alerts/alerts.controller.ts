@@ -1,5 +1,15 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Query
+} from '@nestjs/common';
 import { AlertsQueryDto } from '../common/dto/alerts-query.dto';
+import { HotelQueryDto } from '../common/dto/hotel-query.dto';
 import { HotelContextService } from '../common/hotel-context.service';
 import { parseIsoDate, toUtcDateOnly } from '../common/utils/date.util';
 import { AlertsService } from './alerts.service';
@@ -39,6 +49,48 @@ export class AlertsController {
         message: alert.message,
         resolved: alert.resolved
       }))
+    };
+  }
+
+  @Patch(':id/resolve')
+  @HttpCode(HttpStatus.OK)
+  async resolveAlert(
+    @Param('id', ParseIntPipe) id: number,
+    @Query() query: HotelQueryDto
+  ) {
+    const hotel = await this.hotelContextService.resolveHotel(query.hotelId);
+    const alert = await this.alertsService.setResolvedState(hotel.id, id, true);
+    return {
+      hotel,
+      item: {
+        id: alert.id,
+        date: alert.date.toISOString().slice(0, 10),
+        severity: alert.severity.toLowerCase(),
+        title: alert.title,
+        message: alert.message,
+        resolved: alert.resolved
+      }
+    };
+  }
+
+  @Patch(':id/activate')
+  @HttpCode(HttpStatus.OK)
+  async activateAlert(
+    @Param('id', ParseIntPipe) id: number,
+    @Query() query: HotelQueryDto
+  ) {
+    const hotel = await this.hotelContextService.resolveHotel(query.hotelId);
+    const alert = await this.alertsService.setResolvedState(hotel.id, id, false);
+    return {
+      hotel,
+      item: {
+        id: alert.id,
+        date: alert.date.toISOString().slice(0, 10),
+        severity: alert.severity.toLowerCase(),
+        title: alert.title,
+        message: alert.message,
+        resolved: alert.resolved
+      }
     };
   }
 }

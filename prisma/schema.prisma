@@ -36,8 +36,47 @@ model Hotel {
   alerts          Alerts[]
   recommendations Recommendations[]
   crsSnapshots    CrsRoomRateDistributionSnapshot[]
+  rateShopSnapshots RateShopSnapshot[]
+  recommendationSettings RecommendationSettings?
 
   @@index([name])
+}
+
+model RecommendationSettings {
+  id                     Int      @id @default(autoincrement())
+  hotelId                Int      @unique
+  highOccupancyThreshold Decimal  @db.Decimal(5, 2)
+  lowOccupancyThreshold  Decimal  @db.Decimal(5, 2)
+  significantDiffPct     Decimal  @db.Decimal(6, 2)
+  demandWeight           Decimal  @db.Decimal(6, 4)
+  marketWeight           Decimal  @db.Decimal(6, 4)
+  maxAdjustmentPct       Decimal  @db.Decimal(6, 2)
+  minActionStepPct       Decimal  @db.Decimal(6, 2)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  hotel                  Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  @@index([hotelId, updatedAt])
+}
+
+model RateShopSnapshot {
+  id             Int      @id @default(autoincrement())
+  hotelId        Int
+  competitorName String
+  source         String
+  checkInDate    DateTime
+  checkOutDate   DateTime
+  adults         Int      @default(2)
+  price          Decimal  @db.Decimal(10, 2)
+  currency       String
+  available      Boolean  @default(true)
+  scrapedAt      DateTime @default(now())
+  createdAt      DateTime @default(now())
+  hotel          Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  @@index([hotelId, checkInDate, scrapedAt])
+  @@index([hotelId, competitorName, checkInDate])
+  @@index([hotelId, source, checkInDate])
 }
 
 model ReservationRaw {

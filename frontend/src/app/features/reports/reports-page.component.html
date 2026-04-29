@@ -1,0 +1,195 @@
+﻿<section class="page">
+  <div class="page-header">
+    <div class="page-title">
+      <h1>Hub de reportes</h1>
+      <p>Consulta operativa y ejecutiva con salida exportable para analisis externo.</p>
+    </div>
+
+    <div class="inline-actions">
+      <button mat-stroked-button color="primary" (click)="onRefreshClick()" [disabled]="loading()">
+        <mat-icon>refresh</mat-icon>
+        Recargar todo
+      </button>
+      <button mat-flat-button color="primary" (click)="onReloadParameterizedReports()" [disabled]="loading()">
+        <mat-icon>tune</mat-icon>
+        Recalcular parametricos
+      </button>
+    </div>
+  </div>
+
+  <app-date-range-filter
+    [startDate]="dateRange().startDate"
+    [endDate]="dateRange().endDate"
+    [disabled]="loading()"
+    mode="future"
+    [showPresets]="true"
+    (applyDateRange)="onDateRangeApply($event)"
+  />
+
+  <mat-card class="section-card">
+    <mat-card-content class="parameter-grid">
+      <mat-form-field appearance="outline">
+        <mat-label>Tolerancia compliance (%)</mat-label>
+        <input
+          matInput
+          type="number"
+          [value]="tolerancePct()"
+          min="0"
+          max="20"
+          (input)="onToleranceChanged($any($event.target).value)"
+        />
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>CRS WhichDate</mat-label>
+        <input
+          matInput
+          [value]="whichDate()"
+          placeholder="Confirmation"
+          (input)="onWhichDateChanged($any($event.target).value)"
+        />
+      </mat-form-field>
+
+      <p class="parameter-hint">
+        Estos filtros afectan recommendation compliance y CRS reconciliation.
+      </p>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-progress-bar *ngIf="loading()" mode="indeterminate" />
+
+  <mat-card class="section-card">
+    <mat-card-content>
+      <div class="report-hub" role="tablist" aria-label="Selector de reportes">
+        <button
+          type="button"
+          class="report-selector"
+          *ngFor="let report of reportCards()"
+          (click)="onSelectReport(report.key)"
+          [class.active]="selectedReport() === report.key"
+        >
+          <div class="selector-main">
+            <mat-icon aria-hidden="true">{{ report.icon }}</mat-icon>
+            <div>
+              <strong>{{ report.label }}</strong>
+              <small>{{ report.description }}</small>
+            </div>
+          </div>
+
+          <div class="selector-meta">
+            <span
+              class="status-badge"
+              [class.badge-ok]="report.hasData && !report.hasError"
+              [class.badge-warn]="report.hasError"
+              [class.badge-info]="!report.hasData && !report.hasError"
+            >
+              {{ report.hasError ? 'Error' : report.hasData ? 'Listo' : 'Sin datos' }}
+            </span>
+            <span class="row-count">{{ report.rowCount }} filas</span>
+          </div>
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="section-card">
+    <mat-card-header>
+      <mat-card-title>{{ selectedCatalogItem().label }}</mat-card-title>
+      <mat-card-subtitle>{{ selectedCatalogItem().description }}</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="state-card" *ngIf="selectedReportError() as error">
+        <strong>Error:</strong> {{ error }}
+      </div>
+
+      <div class="summary-grid" *ngIf="selectedReportView().summary.length; else noSummary">
+        <article
+          class="summary-tile"
+          *ngFor="let item of selectedReportView().summary"
+          [class.ok]="item.tone === 'ok'"
+          [class.warn]="item.tone === 'warn'"
+          [class.info]="item.tone === 'info'"
+        >
+          <span>{{ item.label }}</span>
+          <strong>{{ item.value }}</strong>
+        </article>
+      </div>
+
+      <ng-template #noSummary>
+        <div class="state-card">No hay resumen disponible para este reporte.</div>
+      </ng-template>
+
+      <div class="inline-actions table-actions">
+        <button
+          mat-stroked-button
+          color="primary"
+          (click)="onExportPrimaryCsv()"
+          [disabled]="!hasRows(selectedReportView().primaryTable)"
+        >
+          <mat-icon>download</mat-icon>
+          Exportar CSV principal
+        </button>
+
+        <button
+          mat-stroked-button
+          (click)="onExportSecondaryCsv()"
+          [disabled]="!hasRows(selectedReportView().secondaryTable)"
+        >
+          <mat-icon>download</mat-icon>
+          Exportar CSV secundario
+        </button>
+      </div>
+
+      <section class="table-section" *ngIf="selectedReportView().primaryTable as table">
+        <h2>{{ table.title }}</h2>
+
+        <div class="table-wrap" *ngIf="table.rows.length; else emptyPrimaryTable">
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th *ngFor="let column of table.columns">{{ prettyColumn(column) }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of table.rows">
+                <td *ngFor="let column of table.columns">{{ formatCell(column, row[column]) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <ng-template #emptyPrimaryTable>
+          <div class="state-card">{{ table.emptyMessage }}</div>
+        </ng-template>
+      </section>
+
+      <section class="table-section" *ngIf="selectedReportView().secondaryTable as secondary">
+        <h2>{{ secondary.title }}</h2>
+
+        <div class="table-wrap" *ngIf="secondary.rows.length; else emptySecondaryTable">
+          <table class="report-table">
+            <thead>
+              <tr>
+                <th *ngFor="let column of secondary.columns">{{ prettyColumn(column) }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of secondary.rows">
+                <td *ngFor="let column of secondary.columns">{{ formatCell(column, row[column]) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <ng-template #emptySecondaryTable>
+          <div class="state-card">{{ secondary.emptyMessage }}</div>
+        </ng-template>
+      </section>
+
+      <ul class="notes" *ngIf="selectedReportView().notes.length">
+        <li *ngFor="let note of selectedReportView().notes">{{ note }}</li>
+      </ul>
+    </mat-card-content>
+  </mat-card>
+</section>

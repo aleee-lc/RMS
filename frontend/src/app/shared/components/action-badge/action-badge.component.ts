@@ -18,6 +18,12 @@ export class ActionBadgeComponent {
     hold: 'Mantener'
   };
 
+  iconMap: Record<RecommendationAction, string> = {
+    increase: '↗',
+    decrease: '↘',
+    hold: '•'
+  };
+
   badgeClass(action: RecommendationAction): string {
     return `badge-${action}`;
   }

@@ -1,22 +1,28 @@
 <div class="app-shell">
-  <mat-toolbar class="topbar" color="primary">
+  <header class="topbar">
     <div class="brand">
-      <mat-icon>hotel</mat-icon>
-      <span>RMS Console</span>
+      <div class="brand-icon" aria-hidden="true">
+        <mat-icon>hotel</mat-icon>
+      </div>
+      <div class="brand-copy">
+        <span class="brand-title">RMS Console</span>
+        <small>Revenue workflow: medir, decidir, ejecutar</small>
+      </div>
     </div>
 
-    <nav class="top-nav">
+    <nav class="top-nav" aria-label="Navegacion principal">
       <a
         *ngFor="let item of navItems"
-        mat-button
+        mat-stroked-button
         [routerLink]="item.path"
         routerLinkActive="active-link"
+        [routerLinkActiveOptions]="{ exact: item.path === '/dashboard' }"
       >
         <mat-icon>{{ item.icon }}</mat-icon>
         {{ item.label }}
       </a>
     </nav>
-  </mat-toolbar>
+  </header>
 
   <main class="content">
     <router-outlet />

@@ -18,3 +18,12 @@ export interface AlertsResponse {
   count: number;
   items: AlertItem[];
 }
+
+export interface AlertItemResponse {
+  hotel: {
+    id: number;
+    name: string;
+    totalRooms: number;
+  };
+  item: AlertItem;
+}

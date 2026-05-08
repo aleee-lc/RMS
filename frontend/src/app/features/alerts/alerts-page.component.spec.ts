@@ -15,13 +15,14 @@ describe('AlertsPageComponent', () => {
           {
             id: 21,
             date: '2026-04-24',
+            type: 'competitive-set',
             severity: 'high',
             title: 'High demand',
             message: 'Increase rate',
-            resolved: false
-          }
-        ]
-      })
+            resolved: false,
+          },
+        ],
+      }),
     ),
     resolveAlert: vi.fn(() =>
       of({
@@ -29,12 +30,13 @@ describe('AlertsPageComponent', () => {
         item: {
           id: 21,
           date: '2026-04-24',
+          type: 'competitive-set',
           severity: 'high',
           title: 'High demand',
           message: 'Increase rate',
-          resolved: true
-        }
-      })
+          resolved: true,
+        },
+      }),
     ),
     activateAlert: vi.fn(() =>
       of({
@@ -42,20 +44,21 @@ describe('AlertsPageComponent', () => {
         item: {
           id: 21,
           date: '2026-04-24',
+          type: 'competitive-set',
           severity: 'high',
           title: 'High demand',
           message: 'Increase rate',
-          resolved: false
-        }
-      })
-    )
+          resolved: false,
+        },
+      }),
+    ),
   };
 
   beforeEach(async () => {
     vi.clearAllMocks();
     await TestBed.configureTestingModule({
       imports: [AlertsPageComponent],
-      providers: [provideNoopAnimations(), { provide: AlertsService, useValue: alertsServiceMock }]
+      providers: [provideNoopAnimations(), { provide: AlertsService, useValue: alertsServiceMock }],
     }).compileComponents();
   });
 
@@ -86,7 +89,7 @@ describe('AlertsPageComponent', () => {
     component.onResolvedFilterChange('false');
 
     expect(alertsServiceMock.getAlerts).toHaveBeenLastCalledWith(
-      expect.objectContaining({ resolved: false })
+      expect.objectContaining({ resolved: false }),
     );
   });
 });

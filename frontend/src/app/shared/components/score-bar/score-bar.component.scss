@@ -1,0 +1,33 @@
+.score {
+  align-items: center;
+  display: grid;
+  gap: 5px;
+  min-width: 74px;
+}
+
+.score span {
+  color: #334155;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.track {
+  background: #e2e8f0;
+  border-radius: 999px;
+  height: 5px;
+  overflow: hidden;
+}
+
+.fill {
+  background: #64748b;
+  border-radius: inherit;
+  height: 100%;
+}
+
+.opportunity .fill {
+  background: #047857;
+}
+
+.risk .fill {
+  background: #b91c1c;
+}

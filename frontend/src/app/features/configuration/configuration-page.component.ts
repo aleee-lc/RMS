@@ -1,4 +1,5 @@
 ﻿import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -10,8 +11,13 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { CompetitorItem } from '../../core/models/competitor.model';
-import { HotelConfig } from '../../core/models/hotel.model';
+import {
+  DEFAULT_RECOMMENDATION_SETTINGS,
+  HotelConfig,
+  RecommendationSettings
+} from '../../core/models/hotel.model';
 import { CompetitorsService } from '../../core/services/competitors.service';
 import { HotelsService } from '../../core/services/hotels.service';
 
@@ -28,7 +34,8 @@ import { HotelsService } from '../../core/services/hotels.service';
     MatInputModule,
     MatSelectModule,
     MatProgressBarModule,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatTooltipModule
   ],
   templateUrl: './configuration-page.component.html',
   styleUrl: './configuration-page.component.scss'
@@ -39,6 +46,7 @@ export class ConfigurationPageComponent {
 
   readonly loadingHotels = signal(false);
   readonly loadingCompetitors = signal(false);
+  readonly loadingRecommendationSettings = signal(false);
   readonly saving = signal(false);
 
   readonly hotelsError = signal<string | null>(null);
@@ -48,6 +56,7 @@ export class ConfigurationPageComponent {
   readonly competitors = signal<CompetitorItem[]>([]);
   readonly selectedHotelId = signal<number | null>(null);
   readonly competitorDrafts = signal<Record<number, string>>({});
+  readonly recommendationSettingsSource = signal<'default' | 'custom'>('default');
 
   readonly selectedHotel = computed(() =>
     this.hotels().find((hotel) => hotel.id === this.selectedHotelId()) ?? null
@@ -79,6 +88,65 @@ export class ConfigurationPageComponent {
     name: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(120)]]
   });
 
+  readonly recommendationSettingsForm = this.fb.nonNullable.group({
+    highOccupancyThreshold: [
+      DEFAULT_RECOMMENDATION_SETTINGS.highOccupancyThreshold,
+      [Validators.required, Validators.min(0), Validators.max(100)]
+    ],
+    lowOccupancyThreshold: [
+      DEFAULT_RECOMMENDATION_SETTINGS.lowOccupancyThreshold,
+      [Validators.required, Validators.min(0), Validators.max(100)]
+    ],
+    significantDiffPct: [
+      DEFAULT_RECOMMENDATION_SETTINGS.significantDiffPct,
+      [Validators.required, Validators.min(0), Validators.max(100)]
+    ],
+    demandWeight: [
+      DEFAULT_RECOMMENDATION_SETTINGS.demandWeight,
+      [Validators.required, Validators.min(0), Validators.max(2)]
+    ],
+    marketWeight: [
+      DEFAULT_RECOMMENDATION_SETTINGS.marketWeight,
+      [Validators.required, Validators.min(0), Validators.max(2)]
+    ],
+    maxAdjustmentPct: [
+      DEFAULT_RECOMMENDATION_SETTINGS.maxAdjustmentPct,
+      [Validators.required, Validators.min(1), Validators.max(40)]
+    ],
+    minActionStepPct: [
+      DEFAULT_RECOMMENDATION_SETTINGS.minActionStepPct,
+      [Validators.required, Validators.min(0.5), Validators.max(20)]
+    ]
+  });
+
+  readonly recommendationSettingsError = computed(() => {
+    const values = this.recommendationSettingsForm.getRawValue();
+    if (values.lowOccupancyThreshold >= values.highOccupancyThreshold) {
+      return 'La ocupacion baja debe ser menor que la ocupacion alta.';
+    }
+    if (values.minActionStepPct > values.maxAdjustmentPct) {
+      return 'El paso minimo no puede ser mayor al ajuste maximo.';
+    }
+    return null;
+  });
+
+  readonly recommendationSettingHelp: Record<keyof RecommendationSettings, string> = {
+    highOccupancyThreshold:
+      'Por arriba de este porcentaje se considera demanda alta para evaluar incrementos de precio.',
+    lowOccupancyThreshold:
+      'Por debajo de este porcentaje se considera demanda baja para evaluar reducciones de precio.',
+    significantDiffPct:
+      'Brecha minima (%) contra el mercado para considerar que el precio esta fuera de posicion.',
+    demandWeight:
+      'Peso de la senal de demanda (ocupacion) en el calculo del precio sugerido.',
+    marketWeight:
+      'Peso de la posicion de mercado (tu precio vs comp set) en el calculo del precio sugerido.',
+    maxAdjustmentPct:
+      'Tope de ajuste permitido (%) por recomendacion para evitar cambios extremos en una sola accion.',
+    minActionStepPct:
+      'Cambio minimo (%) cuando la accion final es INCREASE o DECREASE.'
+  };
+
   constructor(
     private readonly hotelsService: HotelsService,
     private readonly competitorsService: CompetitorsService
@@ -95,6 +163,7 @@ export class ConfigurationPageComponent {
     this.selectedHotelId.set(hotelId);
     this.loadHotelDetail(hotelId);
     this.loadCompetitors(hotelId);
+    this.loadRecommendationSettings(hotelId);
   }
 
   onCreateHotel(): void {
@@ -240,6 +309,86 @@ export class ConfigurationPageComponent {
     });
   }
 
+  onSaveRecommendationSettings(): void {
+    const hotelId = this.selectedHotelId();
+    if (!hotelId) {
+      return;
+    }
+    if (this.recommendationSettingsForm.invalid || this.recommendationSettingsError()) {
+      this.recommendationSettingsForm.markAllAsTouched();
+      return;
+    }
+
+    this.saving.set(true);
+    const values = this.recommendationSettingsForm.getRawValue();
+    const payload = {
+      highOccupancyThreshold: Number(values.highOccupancyThreshold),
+      lowOccupancyThreshold: Number(values.lowOccupancyThreshold),
+      significantDiffPct: Number(values.significantDiffPct),
+      demandWeight: Number(values.demandWeight),
+      marketWeight: Number(values.marketWeight),
+      maxAdjustmentPct: Number(values.maxAdjustmentPct),
+      minActionStepPct: Number(values.minActionStepPct)
+    };
+
+    this.hotelsService
+      .updateRecommendationSettings(hotelId, payload)
+      .subscribe({
+        next: ({ item }) => {
+          this.saving.set(false);
+          this.recommendationSettingsSource.set('custom');
+          this.applyRecommendationSettings(item);
+          this.snackBar.open('Parametros de recomendaciones actualizados.', 'Cerrar', {
+            duration: 2500
+          });
+        },
+        error: (error: HttpErrorResponse) => {
+          this.saving.set(false);
+          this.snackBar.open(
+            this.extractApiErrorMessage(
+              error,
+              'No fue posible actualizar los parametros de recomendaciones.'
+            ),
+            'Cerrar',
+            {
+              duration: 4000
+            }
+          );
+        }
+      });
+  }
+
+  onResetRecommendationSettingsToDefault(): void {
+    const hotelId = this.selectedHotelId();
+    if (!hotelId) {
+      return;
+    }
+
+    this.saving.set(true);
+    this.hotelsService
+      .updateRecommendationSettings(hotelId, { ...DEFAULT_RECOMMENDATION_SETTINGS })
+      .subscribe({
+        next: ({ item }) => {
+          this.saving.set(false);
+          this.recommendationSettingsSource.set('custom');
+          this.applyRecommendationSettings(item);
+          this.snackBar.open('Se restauraron los parametros base del motor.', 'Cerrar', {
+            duration: 2500
+          });
+        },
+        error: (error: HttpErrorResponse) => {
+          this.saving.set(false);
+          this.snackBar.open(
+            this.extractApiErrorMessage(error, 'No fue posible restaurar los parametros base.'),
+            'Cerrar',
+            {
+              duration: 4000
+            }
+          );
+        }
+      });
+  }
+
   private loadHotels(preferredHotelId?: number): void {
     this.loadingHotels.set(true);
     this.hotelsError.set(null);
@@ -255,6 +404,7 @@ export class ConfigurationPageComponent {
         if (selected) {
           this.loadHotelDetail(selected);
           this.loadCompetitors(selected);
+          this.loadRecommendationSettings(selected);
         } else {
           this.updateHotelForm.reset({
             code: '',
@@ -265,6 +415,8 @@ export class ConfigurationPageComponent {
           });
           this.competitors.set([]);
           this.competitorDrafts.set({});
+          this.applyRecommendationSettings(DEFAULT_RECOMMENDATION_SETTINGS);
+          this.recommendationSettingsSource.set('default');
         }
       },
       error: () => {
@@ -311,5 +463,48 @@ export class ConfigurationPageComponent {
         this.competitorsError.set('No fue posible cargar competidores del hotel.');
       }
     });
+  }
+
+  private loadRecommendationSettings(hotelId: number): void {
+    this.loadingRecommendationSettings.set(true);
+
+    this.hotelsService.getRecommendationSettings(hotelId).subscribe({
+      next: ({ item, isDefault }) => {
+        this.loadingRecommendationSettings.set(false);
+        this.applyRecommendationSettings(item);
+        this.recommendationSettingsSource.set(isDefault ? 'default' : 'custom');
+      },
+      error: () => {
+        this.loadingRecommendationSettings.set(false);
+        this.applyRecommendationSettings(DEFAULT_RECOMMENDATION_SETTINGS);
+        this.recommendationSettingsSource.set('default');
+      }
+    });
+  }
+
+  private applyRecommendationSettings(settings: RecommendationSettings): void {
+    this.recommendationSettingsForm.setValue({
+      highOccupancyThreshold: settings.highOccupancyThreshold,
+      lowOccupancyThreshold: settings.lowOccupancyThreshold,
+      significantDiffPct: settings.significantDiffPct,
+      demandWeight: settings.demandWeight,
+      marketWeight: settings.marketWeight,
+      maxAdjustmentPct: settings.maxAdjustmentPct,
+      minActionStepPct: settings.minActionStepPct
+    });
+  }
+
+  private extractApiErrorMessage(error: HttpErrorResponse, fallback: string): string {
+    const payload = error.error as { message?: string | string[] } | null;
+
+    if (Array.isArray(payload?.message) && payload.message.length > 0) {
+      return payload.message.join(' | ');
+    }
+
+    if (typeof payload?.message === 'string' && payload.message.trim().length > 0) {
+      return payload.message;
+    }
+
+    return fallback;
   }
 }

@@ -37,6 +37,7 @@ export class MarketService {
     hotelRow: string;
     marketAverageRow: string | null;
     datesProcessed: number;
+    dateRange: { start: string; end: string } | null;
     competitorsUpserted: number;
     marketRatesUpserted: number;
     competitorRatesUpserted: number;
@@ -59,126 +60,180 @@ export class MarketService {
       throw new BadRequestException('No price rows found in Expedia workbook');
     }
 
-    // Business rule from user: first listed hotel row is always the property itself.
     const hotelRow = priceRows[0];
     const marketAverageRow = this.pickMarketAverageRow(priceRows);
 
     const competitorRows = priceRows.filter((row) => {
       if (row.rowIndex === hotelRow.rowIndex) return false;
       if (marketAverageRow && row.rowIndex === marketAverageRow.rowIndex) return false;
-      if (/competitive set average rates/i.test(row.label)) return false;
+      if (/competitive\s*set\s*average(?:\s*rates)?/i.test(row.label)) return false;
       if (/search demand|previous year|rest of/i.test(row.label)) return false;
       return true;
     });
 
-    const competitorMap = new Map<string, number>();
-    for (const competitor of competitorRows) {
-      const created = await this.prisma.competitor.upsert({
-        where: {
-          hotelId_name: {
+    const competitors = await Promise.all(
+      competitorRows.map((competitor) =>
+        this.prisma.competitor.upsert({
+          where: {
+            hotelId_name: {
+              hotelId,
+              name: competitor.label
+            }
+          },
+          update: {},
+          create: {
             hotelId,
             name: competitor.label
           }
-        },
-        update: {},
-        create: {
-          hotelId,
-          name: competitor.label
-        }
-      });
+        })
+      )
+    );
 
-      competitorMap.set(competitor.label, created.id);
-    }
+    const competitorMap = new Map<string, number>(
+      competitors.map((competitor) => [competitor.name, competitor.id])
+    );
 
     const sortedColumns = [...dateColumns.entries()].sort((a, b) => a[0] - b[0]);
-    const marketRateIdsByDate = new Map<string, number>();
+    const marketRateInputs = sortedColumns
+      .map(([columnIndex, date]) => {
+        const yourPrice = hotelRow.valuesByColumn.get(columnIndex) ?? null;
+        const explicitMarketAverage = marketAverageRow?.valuesByColumn.get(columnIndex) ?? null;
 
-    for (const [columnIndex, date] of sortedColumns) {
-      const yourPrice = hotelRow.valuesByColumn.get(columnIndex) ?? null;
-      const explicitMarketAverage = marketAverageRow?.valuesByColumn.get(columnIndex) ?? null;
+        const competitorValues = competitorRows
+          .map((row) => row.valuesByColumn.get(columnIndex))
+          .filter((value): value is number => typeof value === 'number');
 
-      const competitorValues = competitorRows
-        .map((row) => row.valuesByColumn.get(columnIndex))
-        .filter((value): value is number => typeof value === 'number');
+        const inferredAverage =
+          competitorValues.length > 0
+            ? round2(
+                competitorValues.reduce((sum, value) => sum + value, 0) / competitorValues.length
+              )
+            : null;
 
-      const inferredAverage =
-        competitorValues.length > 0
-          ? round2(
-              competitorValues.reduce((sum, value) => sum + value, 0) / competitorValues.length
-            )
-          : null;
+        const marketAverage = explicitMarketAverage ?? inferredAverage;
 
-      const marketAverage = explicitMarketAverage ?? inferredAverage;
+        if (yourPrice === null && marketAverage === null && competitorValues.length === 0) {
+          return null;
+        }
 
-      if (yourPrice === null && marketAverage === null && competitorValues.length === 0) {
-        continue;
-      }
-
-      const marketRate = await this.prisma.marketRates.upsert({
-        where: {
-          hotelId_date: {
-            hotelId,
-            date
-          }
-        },
-        update: {
-          yourPrice,
-          marketAverage,
-          sourceFile: fileName
-        },
-        create: {
-          hotelId,
+        return {
+          columnIndex,
           date,
           yourPrice,
-          marketAverage,
-          sourceFile: fileName
-        }
-      });
+          marketAverage
+        };
+      })
+      .filter(
+        (
+          input
+        ): input is {
+          columnIndex: number;
+          date: Date;
+          yourPrice: number | null;
+          marketAverage: number | null;
+        } => input !== null
+      );
 
-      marketRateIdsByDate.set(dateKey(date), marketRate.id);
-    }
-
-    let competitorRatesUpserted = 0;
-    for (const competitorRow of competitorRows) {
-      const competitorId = competitorMap.get(competitorRow.label);
-      if (!competitorId) continue;
-
-      for (const [columnIndex, date] of sortedColumns) {
-        const value = competitorRow.valuesByColumn.get(columnIndex);
-        if (value === undefined) {
-          continue;
-        }
-
-        const marketRateId = marketRateIdsByDate.get(dateKey(date));
-        if (!marketRateId) {
-          continue;
-        }
-
-        await this.prisma.competitorMarketRates.upsert({
+    const marketRates = await Promise.all(
+      marketRateInputs.map((input) =>
+        this.prisma.marketRates.upsert({
           where: {
-            competitorId_marketRateId: {
-              competitorId,
-              marketRateId
+            hotelId_date: {
+              hotelId,
+              date: input.date
             }
           },
           update: {
-            price: value
+            yourPrice: input.yourPrice,
+            marketAverage: input.marketAverage,
+            sourceFile: fileName
           },
           create: {
+            hotelId,
+            date: input.date,
+            yourPrice: input.yourPrice,
+            marketAverage: input.marketAverage,
+            sourceFile: fileName
+          }
+        })
+      )
+    );
+
+    const marketRateIdsByDate = new Map(
+      marketRates.map((marketRate) => [dateKey(marketRate.date), marketRate.id])
+    );
+
+    const competitorRateRows = competitorRows.flatMap((competitorRow) => {
+      const competitorId = competitorMap.get(competitorRow.label);
+      if (!competitorId) {
+        return [];
+      }
+
+      return marketRateInputs
+        .map((input) => {
+          const price = competitorRow.valuesByColumn.get(input.columnIndex);
+          const marketRateId = marketRateIdsByDate.get(dateKey(input.date));
+
+          if (price === undefined || !marketRateId) {
+            return null;
+          }
+
+          return {
             competitorId,
             marketRateId,
-            price: value
-          }
-        });
+            price
+          };
+        })
+        .filter(
+          (
+            row
+          ): row is {
+            competitorId: number;
+            marketRateId: number;
+            price: number;
+          } => row !== null
+        );
+    });
 
-        competitorRatesUpserted += 1;
-      }
+    if (competitorRateRows.length > 0) {
+      await this.prisma.$transaction([
+        this.prisma.competitorMarketRates.deleteMany({
+          where: {
+            competitorId: {
+              in: [...competitorMap.values()]
+            },
+            marketRateId: {
+              in: [...marketRateIdsByDate.values()]
+            }
+          }
+        }),
+        this.prisma.competitorMarketRates.createMany({
+          data: competitorRateRows,
+          skipDuplicates: true
+        })
+      ]);
     }
+
+    const competitorRatesUpserted = competitorRateRows.length;
+
+    const processedDates = sortedColumns
+      .map(([, date]) => date)
+      .filter((date) => marketRateIdsByDate.has(dateKey(date)))
+      .sort((a, b) => a.getTime() - b.getTime());
+
+    const dateRange =
+      processedDates.length > 0
+        ? {
+            start: processedDates[0].toISOString().slice(0, 10),
+            end: processedDates[processedDates.length - 1].toISOString().slice(0, 10)
+          }
+        : null;
 
     return {
       hotelRow: hotelRow.label,
       marketAverageRow: marketAverageRow?.label ?? null,
       datesProcessed: marketRateIdsByDate.size,
+      dateRange,
       competitorsUpserted: competitorRows.length,
       marketRatesUpserted: marketRateIdsByDate.size,
       competitorRatesUpserted
@@ -206,8 +261,9 @@ export class MarketService {
   }
 
   private parseDateColumns(sheet: ExcelJS.Worksheet): Map<number, Date> {
-    const monthRow = 9;
-    const dayOfMonthRow = 11;
+    const detected = this.detectDateHeaderRows(sheet);
+    const monthRow = detected?.monthRow ?? 9;
+    const dayOfMonthRow = detected?.dayRow ?? 11;
     const out = new Map<number, Date>();
 
     let activeMonthLabel = '';
@@ -230,6 +286,50 @@ export class MarketService {
     }
 
     return out;
+  }
+
+  private detectDateHeaderRows(
+    sheet: ExcelJS.Worksheet
+  ): { monthRow: number; dayRow: number } | null {
+    const maxRow = Math.min(sheet.rowCount, 20);
+    let best: { monthRow: number; dayRow: number; count: number } | null = null;
+
+    for (let monthRow = 1; monthRow <= maxRow; monthRow += 1) {
+      for (let dayRow = monthRow + 1; dayRow <= Math.min(monthRow + 4, maxRow); dayRow += 1) {
+        let activeMonthLabel = '';
+        let count = 0;
+
+        for (let column = 2; column <= sheet.columnCount; column += 1) {
+          const monthLabel = this.cellToString(sheet.getRow(monthRow).getCell(column).value);
+          if (monthLabel) {
+            activeMonthLabel = monthLabel;
+          }
+
+          const day = toNumber(sheet.getRow(dayRow).getCell(column).value);
+          if (!activeMonthLabel || day === null || day < 1 || day > 31) {
+            continue;
+          }
+
+          const parsedDate = this.parseMonthAndDay(activeMonthLabel, day);
+          if (parsedDate) {
+            count += 1;
+          }
+        }
+
+        if (!best || count > best.count) {
+          best = { monthRow, dayRow, count };
+        }
+      }
+    }
+
+    if (!best || best.count < 3) {
+      return null;
+    }
+
+    return {
+      monthRow: best.monthRow,
+      dayRow: best.dayRow
+    };
   }
 
   private parsePriceRows(
@@ -270,12 +370,14 @@ export class MarketService {
   }
 
   private pickMarketAverageRow(rows: ParsedPriceRow[]): ParsedPriceRow | null {
-    const exact = rows.find((row) => /^competitive set average rates$/i.test(row.label.trim()));
+    const exact = rows.find((row) =>
+      /^competitive\s*set\s*average(?:\s*rates)?$/i.test(row.label.trim())
+    );
     if (exact) {
       return exact;
     }
 
-    return rows.find((row) => /competitive set average rates/i.test(row.label)) ?? null;
+    return rows.find((row) => /competitive\s*set\s*average(?:\s*rates)?/i.test(row.label)) ?? null;
   }
 
   private parseMonthAndDay(monthLabel: string, day: number): Date | null {
@@ -315,12 +417,14 @@ export class MarketService {
         normalized === '-' ||
         normalized === 'S' ||
         normalized === 'I' ||
-        normalized === 'M'
+        normalized === 'M' ||
+        /sold\s*out/i.test(normalized)
       ) {
         return null;
       }
 
-      const numeric = toNumber(normalized.replace(/[^\d.-]/g, ''));
+      const firstNumericToken = normalized.match(/-?\d[\d,]*(?:\.\d+)?/);
+      const numeric = firstNumericToken ? toNumber(firstNumericToken[0]) : null;
       return numeric === null ? null : round2(numeric);
     }
 

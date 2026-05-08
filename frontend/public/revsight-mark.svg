@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">RevSight Mark</title>
+  <defs>
+    <linearGradient id="eyeStroke" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a3a72" />
+      <stop offset="100%" stop-color="#132f62" />
+    </linearGradient>
+    <linearGradient id="arrowStroke" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1e9f79" />
+      <stop offset="100%" stop-color="#26be87" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="12" fill="#ffffff" />
+  <path
+    d="M6 32 C13 21 22 15 32 15 C42 15 51 21 58 32 C51 43 42 49 32 49 C22 49 13 43 6 32 Z"
+    fill="none"
+    stroke="url(#eyeStroke)"
+    stroke-width="3.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <circle cx="32" cy="32" r="7.5" fill="none" stroke="url(#eyeStroke)" stroke-width="3.2" />
+  <path
+    d="M18 39 L28 29 L37 29 L46 20"
+    fill="none"
+    stroke="url(#arrowStroke)"
+    stroke-width="4"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path d="M43 20 L49 19 L48 25 Z" fill="url(#arrowStroke)" />
+</svg>

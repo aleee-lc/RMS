@@ -22,10 +22,10 @@ type UploadType = 'xml' | 'excel';
     MatButtonToggleModule,
     MatIconModule,
     MatProgressBarModule,
-    MatSnackBarModule
+    MatSnackBarModule,
   ],
   templateUrl: './upload-page.component.html',
-  styleUrl: './upload-page.component.scss'
+  styleUrl: './upload-page.component.scss',
 })
 export class UploadPageComponent {
   readonly selectedType = signal<UploadType>('xml');
@@ -46,24 +46,64 @@ export class UploadPageComponent {
     return [
       {
         label: `Archivo seleccionado (${expectedExt})`,
-        ok: Boolean(file)
+        ok: Boolean(file),
       },
       {
         label: 'Formato valido',
-        ok: extensionOk
+        ok: extensionOk,
       },
       {
         label: 'Tamano menor a 40MB',
-        ok: sizeOk
-      }
+        ok: sizeOk,
+      },
     ];
   });
 
   readonly canUpload = computed(() => this.validationItems().every((item) => item.ok));
+  readonly sourceStatusCards = computed(() => {
+    const result = this.lastResult();
+    return [
+      {
+        label: 'ResEnteredOnBy',
+        source: 'XML Opera/CRS',
+        status:
+          result?.source_type === 'reservation_entered_on'
+            ? 'Actualizado'
+            : 'Pendiente de nueva carga',
+        metric:
+          result?.source_type === 'reservation_entered_on'
+            ? `${result.reservations_inserted ?? 0} reservas`
+            : 'Sin cambios en esta sesion',
+        icon: 'person_add',
+      },
+      {
+        label: 'History & Forecast',
+        source: 'Forecast Opera',
+        status:
+          result?.source_type === 'history_forecast' ? 'Actualizado' : 'Pendiente de nueva carga',
+        metric:
+          result?.source_type === 'history_forecast'
+            ? `${result.daily_metrics_upserted ?? 0} fechas`
+            : 'Sin cambios en esta sesion',
+        icon: 'show_chart',
+      },
+      {
+        label: 'PriceGrid / Expedia',
+        source: 'Comp set',
+        status:
+          result?.source_type === 'expedia_price_grid' ? 'Actualizado' : 'Pendiente de nueva carga',
+        metric:
+          result?.source_type === 'expedia_price_grid'
+            ? `${result.marketRatesUpserted ?? 0} tarifas · ${result.alerts_generated_or_updated ?? 0} alertas`
+            : 'Sin cambios en esta sesion',
+        icon: 'travel_explore',
+      },
+    ];
+  });
 
   constructor(
     private readonly uploadService: UploadService,
-    private readonly snackBar: MatSnackBar
+    private readonly snackBar: MatSnackBar,
   ) {}
 
   onTypeChange(type: UploadType): void {
@@ -115,19 +155,20 @@ export class UploadPageComponent {
     this.uploading.set(true);
     this.errorMessage.set(null);
 
-    const request$ = type === 'xml' ? this.uploadService.uploadXml(file) : this.uploadService.uploadExcel(file);
+    const request$ =
+      type === 'xml' ? this.uploadService.uploadXml(file) : this.uploadService.uploadExcel(file);
 
-    request$
-      .pipe(finalize(() => this.uploading.set(false)))
-      .subscribe({
-        next: (result) => {
-          this.lastResult.set(result);
-          this.snackBar.open('Carga completada con exito.', 'Cerrar', { duration: 2600 });
-        },
-        error: () => {
-          this.errorMessage.set('No fue posible procesar el archivo. Revisa formato y vuelve a intentar.');
-        }
-      });
+    request$.pipe(finalize(() => this.uploading.set(false))).subscribe({
+      next: (result) => {
+        this.lastResult.set(result);
+        this.snackBar.open('Carga completada con exito.', 'Cerrar', { duration: 2600 });
+      },
+      error: () => {
+        this.errorMessage.set(
+          'No fue posible procesar el archivo. Revisa formato y vuelve a intentar.',
+        );
+      },
+    });
   }
 
   toggleRawResult(): void {
@@ -152,8 +193,47 @@ export class UploadPageComponent {
     if (typeof result.daily_metrics_upserted === 'number') {
       rows.push({ label: 'Metricas actualizadas', value: String(result.daily_metrics_upserted) });
     }
+    if (typeof result.marketRatesUpserted === 'number') {
+      rows.push({
+        label: 'Tarifas de mercado actualizadas',
+        value: String(result.marketRatesUpserted),
+      });
+    }
+    if (typeof result.competitorsUpserted === 'number') {
+      rows.push({ label: 'Competidores detectados', value: String(result.competitorsUpserted) });
+    }
+    if (typeof result.competitorRatesUpserted === 'number') {
+      rows.push({
+        label: 'Tarifas de competidores actualizadas',
+        value: String(result.competitorRatesUpserted),
+      });
+    }
+    if (typeof result.recommendations_generated === 'number') {
+      rows.push({
+        label: 'Recomendaciones generadas',
+        value: String(result.recommendations_generated),
+      });
+    }
+    if (typeof result.competitive_set_alerts_generated_or_updated === 'number') {
+      rows.push({
+        label: 'Alertas comp set',
+        value: String(result.competitive_set_alerts_generated_or_updated),
+      });
+    }
+    if (typeof result.pricing_opportunity_alerts_generated_or_updated === 'number') {
+      rows.push({
+        label: 'Alertas oportunidad precio',
+        value: String(result.pricing_opportunity_alerts_generated_or_updated),
+      });
+    }
+    if (typeof result.alerts_generated_or_updated === 'number') {
+      rows.push({
+        label: 'Alertas generadas/actualizadas',
+        value: String(result.alerts_generated_or_updated),
+      });
+    }
 
-    const dateRange = result.date_range;
+    const dateRange = result.date_range ?? result.dateRange;
     if (dateRange?.start && dateRange?.end) {
       rows.push({ label: 'Rango aplicado', value: `${dateRange.start} -> ${dateRange.end}` });
     }

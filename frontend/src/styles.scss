@@ -2,8 +2,8 @@
 
 @include mat.core();
 
-$primary-palette: mat.m2-define-palette(mat.$m2-teal-palette, 700, 500, 900);
-$accent-palette: mat.m2-define-palette(mat.$m2-orange-palette, 700, 500, 900);
+$primary-palette: mat.m2-define-palette(mat.$m2-indigo-palette, 700, 500, 900);
+$accent-palette: mat.m2-define-palette(mat.$m2-teal-palette, 700, 500, 900);
 $warn-palette: mat.m2-define-palette(mat.$m2-red-palette, 700);
 
 $theme: mat.m2-define-light-theme(
@@ -11,9 +11,9 @@ $theme: mat.m2-define-light-theme(
     color: (
       primary: $primary-palette,
       accent: $accent-palette,
-      warn: $warn-palette
+      warn: $warn-palette,
     ),
-    density: 0
+    density: 0,
   )
 );
 
@@ -23,23 +23,24 @@ $theme: mat.m2-define-light-theme(
   --font-base: 'Sora', 'Trebuchet MS', 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'Consolas', monospace;
 
-  --bg-canvas: #edf2f7;
-  --bg-page: #f7fafc;
+  --bg-canvas: #eef2f7;
+  --bg-page: #f6f8fb;
   --bg-panel: #ffffff;
-  --bg-panel-soft: #f8fbfd;
-  --bg-highlight: #e6fffb;
+  --bg-panel-soft: #f7fbff;
+  --bg-highlight: #e7f9f2;
 
   --text-strong: #0f172a;
-  --text-main: #1f2937;
-  --text-soft: #5f6b7a;
+  --text-main: #1f2f45;
+  --text-soft: #5e6c7f;
 
-  --line-soft: #d6e1eb;
-  --line-strong: #b9c9d8;
+  --line-soft: #d4e1ee;
+  --line-strong: #b6c8db;
 
-  --brand-700: #0f766e;
-  --brand-600: #0d9488;
-  --brand-500: #14b8a6;
-  --accent-600: #c2410c;
+  --brand-800: #0f2b56;
+  --brand-700: #12315f;
+  --brand-600: #1a447c;
+  --brand-500: #21ad79;
+  --accent-600: #1b8f6d;
 
   --ok-bg: #dcfce7;
   --ok-text: #166534;
@@ -57,9 +58,9 @@ $theme: mat.m2-define-light-theme(
   --space-5: 1.25rem;
   --space-6: 1.5rem;
 
-  --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
   --radius-pill: 999px;
 
   --shadow-sm: 0 6px 18px rgba(15, 23, 42, 0.05);
@@ -75,10 +76,7 @@ body {
   margin: 0;
   font-family: var(--font-base);
   color: var(--text-main);
-  background:
-    radial-gradient(circle at 18% 18%, rgba(20, 184, 166, 0.11), transparent 38%),
-    radial-gradient(circle at 88% 6%, rgba(249, 115, 22, 0.12), transparent 40%),
-    linear-gradient(180deg, var(--bg-canvas), var(--bg-page));
+  background: var(--bg-canvas);
   min-height: 100%;
 }
 
@@ -105,7 +103,7 @@ a {
 mat-card {
   border-radius: var(--radius-md) !important;
   border: 1px solid var(--line-soft);
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
   background: var(--bg-panel);
 }
 
@@ -122,7 +120,7 @@ th.mat-mdc-header-cell {
 }
 
 td.mat-mdc-cell {
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   color: var(--text-main);
   border-bottom: 1px solid var(--line-soft);
 }
@@ -135,7 +133,7 @@ td.mat-mdc-cell {
 
 .page {
   display: grid;
-  gap: var(--space-4);
+  gap: 14px;
 }
 
 .page-header {
@@ -153,14 +151,14 @@ td.mat-mdc-cell {
 
 .page-title p {
   color: var(--text-soft);
-  font-size: 0.95rem;
+  font-size: 0.84rem;
 }
 
 .section-card {
   border: 1px solid var(--line-soft);
   border-radius: var(--radius-md);
   background: var(--bg-panel);
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 
 .inline-actions {
@@ -224,7 +222,7 @@ td.mat-mdc-cell {
 }
 
 *:focus-visible {
-  outline: 3px solid rgba(13, 148, 136, 0.45);
+  outline: 3px solid rgba(18, 49, 95, 0.4);
   outline-offset: 2px;
 }
 
@@ -232,12 +230,15 @@ button,
 a,
 mat-card,
 .status-badge {
-  transition: transform 120ms ease, box-shadow 180ms ease, background-color 180ms ease;
+  transition:
+    transform 120ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
 }
 
 button:hover:not([disabled]),
 a:hover {
-  transform: translateY(-1px);
+  transform: none;
 }
 
 @media (max-width: 760px) {

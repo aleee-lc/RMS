@@ -3,6 +3,21 @@
   gap: var(--space-4);
 }
 
+.page-header {
+  background: #ffffff;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+}
+
+.eyebrow {
+  color: var(--brand-700);
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .filters {
   display: grid;
   grid-template-columns: 1.6fr 1fr;

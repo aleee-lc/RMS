@@ -1,0 +1,4 @@
+<div class="market-cell" [class.below]="(gapPct() ?? 0) < 0" [class.above]="(gapPct() ?? 0) > 0">
+  <strong>{{ gapPct() === null ? '-' : (gapPct() | number: '1.1-1') + '%' }}</strong>
+  <span>{{ rank() ? 'Rank ' + rank() + '/' + rankTotal() : 'Sin ranking' }}</span>
+</div>

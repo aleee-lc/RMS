@@ -17,10 +17,10 @@ export interface RecommendationSettings {
 export const DEFAULT_RECOMMENDATION_SETTINGS: RecommendationSettings = {
   highOccupancyThreshold: 70,
   lowOccupancyThreshold: 30,
-  significantDiffPct: 10,
+  significantDiffPct: 5,
   demandWeight: 0.5,
   marketWeight: 0.6,
-  maxAdjustmentPct: 20,
+  maxAdjustmentPct: 5,
   minActionStepPct: 5
 };
 

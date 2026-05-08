@@ -83,6 +83,7 @@ export class RecommendationService {
       const metric = metricByDate.get(key);
       const market = marketByDate.get(key);
 
+      const hasDemandSignal = Boolean(metric);
       const occupancy = Number(metric?.occupancy ?? 0);
       const adr = Number(metric?.adr ?? 0);
 
@@ -97,19 +98,25 @@ export class RecommendationService {
       const priceDiffPct =
         marketAverage > 0 ? ((yourPrice - marketAverage) / marketAverage) * 100 : 0;
 
-      const highDemand = occupancy > config.highOccupancyThreshold;
-      const lowDemand = occupancy < config.lowOccupancyThreshold;
+      const highDemand = hasDemandSignal && occupancy > config.highOccupancyThreshold;
+      const lowDemand = hasDemandSignal && occupancy < config.lowOccupancyThreshold;
       const underpriced = priceDiffPct < -config.significantDiffPct;
       const overpriced = priceDiffPct > config.significantDiffPct;
 
       let action: RecommendationAction = RecommendationAction.HOLD;
-      if (highDemand && underpriced) {
+      if (hasDemandSignal) {
+        if (highDemand && underpriced) {
+          action = RecommendationAction.INCREASE;
+        } else if (lowDemand && overpriced) {
+          action = RecommendationAction.DECREASE;
+        }
+      } else if (underpriced) {
         action = RecommendationAction.INCREASE;
-      } else if (lowDemand && overpriced) {
+      } else if (overpriced) {
         action = RecommendationAction.DECREASE;
       }
 
-      const demandFactor = clamp((occupancy - 50) / 100, -0.3, 0.3);
+      const demandFactor = hasDemandSignal ? clamp((occupancy - 50) / 100, -0.3, 0.3) : 0;
       const marketPositioningFactor =
         marketAverage > 0 ? clamp((marketAverage - yourPrice) / marketAverage, -0.2, 0.2) : 0;
 
@@ -138,7 +145,8 @@ export class RecommendationService {
         priceDiffPct,
         action,
         suggestedPrice,
-        config
+        config,
+        hasDemandSignal
       });
 
       const recommendation = await this.prisma.recommendations.upsert({
@@ -153,7 +161,7 @@ export class RecommendationService {
           action,
           suggestedPrice,
           explanation,
-          occupancy: round2(occupancy),
+          occupancy: hasDemandSignal ? round2(occupancy) : null,
           yourPrice: round2(yourPrice),
           marketAverage: round2(marketAverage),
           priceDiffPct: round2(priceDiffPct),
@@ -166,7 +174,7 @@ export class RecommendationService {
           action,
           suggestedPrice,
           explanation,
-          occupancy: round2(occupancy),
+          occupancy: hasDemandSignal ? round2(occupancy) : null,
           yourPrice: round2(yourPrice),
           marketAverage: round2(marketAverage),
           priceDiffPct: round2(priceDiffPct),
@@ -190,9 +198,23 @@ export class RecommendationService {
     action: RecommendationAction;
     suggestedPrice: number;
     config: RecommendationSettingsConfig;
+    hasDemandSignal: boolean;
   }): string {
-    const occupancyText = `${input.occupancy.toFixed(1)}%`;
     const gapText = `${input.priceDiffPct.toFixed(1)}%`;
+
+    if (!input.hasDemandSignal) {
+      if (input.action === RecommendationAction.INCREASE) {
+        return `No demand metric available; market gap (${gapText} below comp set threshold ${input.config.significantDiffPct}%) supports an increase to ${input.suggestedPrice.toFixed(2)}.`;
+      }
+
+      if (input.action === RecommendationAction.DECREASE) {
+        return `No demand metric available; market gap (${gapText} above comp set threshold ${input.config.significantDiffPct}%) supports a decrease to ${input.suggestedPrice.toFixed(2)}.`;
+      }
+
+      return `No demand metric available and price position (${gapText} vs market) is within configured threshold; hold at ${input.suggestedPrice.toFixed(2)}.`;
+    }
+
+    const occupancyText = `${input.occupancy.toFixed(1)}%`;
 
     if (input.action === RecommendationAction.INCREASE) {
       return `High demand (${occupancyText} occupancy > ${input.config.highOccupancyThreshold}%) and underpricing (${gapText} vs market threshold ${input.config.significantDiffPct}%) support an increase to ${input.suggestedPrice.toFixed(2)}.`;

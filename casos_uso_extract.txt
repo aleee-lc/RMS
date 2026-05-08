@@ -1,0 +1,541 @@
+ANEXO – CASOS DE USO DETALLADOS
+Sistema de apoyo a la toma de decisiones para Revenue Management hotelero
+Alejandro Lopez Cañedo | Facultad de Ingeniería Mochis, UAS | Febrero 2026
+El presente anexo documenta los casos de uso identificados para el sistema SAD-RM. Se identificaron tres actores principales: el Revenue Manager (usuario principal), el Administrador del sistema y las fuentes externas (Opera Cloud y Expedia). Los casos de uso cubren los módulos de ingesta de datos, análisis de métricas, generación de recomendaciones, gestión de alertas y generación de reportes.
+A. Módulo de Ingesta de Datos
+
+CU-01: Cargar archivo XML de reservas (Reservation Entered On)
+ID
+CU-01
+Nombre
+Cargar archivo XML de reservas (Reservation Entered On)
+Actor principal
+Revenue Manager
+Actor secundario
+Sistema Opera Cloud (fuente externa)
+Precondición
+El usuario posee un archivo XML exportado de Opera Cloud de tipo 'Reservation Entered On' con nodos G_ROOM. El sistema está en funcionamiento y el hotel está registrado.
+Postcondición
+Las reservas se almacenan en la tabla ReservationRaw (sin duplicados). Las métricas diarias del rango de fechas afectado son recomputadas automáticamente. El dashboard refleja los nuevos datos.
+Flujo principal
+1. El Revenue Manager accede a la pantalla 'Upload'.
+2. Hace clic en la tarjeta 'Cargar XML de Reservas'.
+3. Selecciona el archivo XML desde su sistema de archivos.
+4. El frontend envía el archivo via POST /upload/xml.
+5. El IngestionController detecta automáticamente el formato G_ROOM.
+6. El IngestionService extrae cada nodo de reserva y lo transforma al modelo interno.
+7. Los registros se insertan en ReservationRaw con skipDuplicates (idempotencia).
+8. El MetricsService recomputa las métricas diarias del rango afectado.
+9. El sistema muestra un resumen: reservas insertadas, días recomputados.
+Flujos alternativos
+4a. El archivo no tiene el formato esperado: el sistema intenta otros parsers disponibles.
+4b. Ningún parser aplica: retorna error HTTP 400 con mensaje descriptivo.
+4c. El archivo ya fue cargado previamente: se insertan solo registros nuevos (skipDuplicates).
+4d. Error de red al subir: el frontend muestra mensaje de reintento.
+Excepciones
+Si el XML está malformado o vacío, el sistema retorna error 400 y no modifica la base de datos.
+Restricciones
+Solo acepta archivos con extensión .xml. El tamaño máximo recomendado es 50 MB. La operación es idempotente: cargar el mismo archivo no genera duplicados.
+
+CU-02: Cargar archivo XML de histórico y pronóstico (History and Forecast)
+ID
+CU-02
+Nombre
+Cargar archivo XML de histórico y pronóstico (History and Forecast)
+Actor principal
+Revenue Manager
+Actor secundario
+Sistema Opera Cloud (fuente externa)
+Precondición
+El usuario posee un archivo XML de Opera Cloud de tipo 'History and Forecast' con nodos A_STAT y/o B_FORE.
+Postcondición
+Los datos históricos y de pronóstico quedan almacenados. Las métricas diarias se actualizan con los valores de ocupación y ADR del periodo cubierto.
+Flujo principal
+1. El Revenue Manager accede a la pantalla 'Upload'.
+2. Hace clic en la tarjeta 'Cargar Histórico / Pronóstico'.
+3. Selecciona el archivo XML.
+4. El frontend envía el archivo via POST /upload/xml.
+5. El sistema detecta los nodos A_STAT (histórico) y B_FORE (pronóstico).
+6. Parsea ocupación, ADR y revenue por fecha.
+7. Actualiza o crea registros en DailyMetrics para cada fecha.
+8. Muestra resumen: fechas históricas y de pronóstico cargadas.
+Flujos alternativos
+5a. Solo hay nodos A_STAT (sin pronóstico): el sistema procesa únicamente el histórico.
+5b. Solo hay nodos B_FORE: se cargan solo datos de pronóstico.
+7a. Ya existen métricas para esas fechas: se sobreescriben con los valores del archivo (upsert).
+Excepciones
+Si el archivo no contiene nodos A_STAT ni B_FORE, retorna error 400.
+Restricciones
+Solo acepta archivos .xml. Idempotente: recargar el mismo archivo actualiza los valores existentes sin crear duplicados.
+
+CU-03: Cargar archivo XML de distribución de tarifas CRS (RoomRateDistribution)
+ID
+CU-03
+Nombre
+Cargar archivo XML de distribución de tarifas CRS (RoomRateDistribution)
+Actor principal
+Revenue Manager
+Actor secundario
+Sistema Opera Cloud (fuente externa)
+Precondición
+El usuario posee un archivo XML de Opera Cloud de tipo 'CRS RoomRateDistribution'.
+Postcondición
+Los snapshots de distribución de tarifas CRS quedan almacenados en CrsRoomRateDistributionSnapshot para su uso en el reporte de reconciliación CRS vs. RMS.
+Flujo principal
+1. El Revenue Manager accede a la pantalla 'Upload'.
+2. Hace clic en la tarjeta 'Cargar CRS RoomRateDistribution'.
+3. Selecciona el archivo XML.
+4. El frontend envía el archivo via POST /upload/xml.
+5. El sistema detecta el formato CRS RoomRateDistribution.
+6. Extrae los totales de tarifas por tipo de habitación y canal de distribución.
+7. Almacena el snapshot con fecha de carga en CrsRoomRateDistributionSnapshot.
+8. Muestra confirmación de registros almacenados.
+Flujos alternativos
+5a. El formato no corresponde a CRS: el sistema retorna error 400.
+7a. Ya existe un snapshot del mismo día: se actualiza en lugar de duplicar.
+Excepciones
+Si el XML está vacío o tiene estructura inválida, el sistema retorna error 400.
+Restricciones
+Solo acepta archivos .xml. El snapshot queda vinculado al hotel activo.
+
+CU-04: Cargar grilla de precios de competencia desde Expedia (Excel)
+ID
+CU-04
+Nombre
+Cargar grilla de precios de competencia desde Expedia (Excel)
+Actor principal
+Revenue Manager
+Actor secundario
+Expedia / Portal de competencia (fuente externa)
+Precondición
+El usuario posee un archivo Excel (.xlsx) descargado de Expedia con la grilla de precios diarios del hotel y sus competidores. La estructura esperada: fila 9 = encabezados de mes, fila 11 = días del mes, fila 12+ = precios por hotel.
+Postcondición
+Los precios del hotel propio se actualizan en MarketRates (campo yourPrice). Los precios de cada competidor se almacenan en CompetitorMarketRates. El promedio de mercado (marketAverage) es calculado y guardado en MarketRates.
+Flujo principal
+1. El Revenue Manager accede a la pantalla 'Upload'.
+2. Hace clic en la tarjeta 'Cargar Grilla Expedia (Excel)'.
+3. Selecciona el archivo .xlsx.
+4. El frontend envía el archivo via POST /upload/excel.
+5. El parser ExcelJS localiza la fila 9 (meses) y fila 11 (días) para construir el mapa de fechas.
+6. Itera desde la fila 12: la primera fila de precios es el hotel propio; las siguientes son competidores.
+7. Crea o actualiza registros de Competitor si son nuevos.
+8. Almacena los precios en CompetitorMarketRates y actualiza yourPrice en MarketRates.
+9. Calcula el marketAverage como promedio de precios de competidores y lo guarda en MarketRates.
+10. Muestra resumen: fechas cargadas, competidores detectados.
+Flujos alternativos
+5a. El archivo no sigue la estructura esperada de Expedia: error 400.
+7a. El competidor ya existe: se reutiliza el registro existente.
+8a. Una celda de precio está vacía: se omite ese día para ese competidor.
+Excepciones
+Si el archivo tiene formato incorrecto o no es un .xlsx válido, el sistema retorna error 400.
+Restricciones
+Solo acepta archivos .xlsx. La primera fila de precios (fila 12) siempre corresponde al hotel propio.
+
+B. Módulo de Métricas y KPIs
+
+CU-05: Consultar métricas diarias (ocupación, ADR, revenue)
+ID
+CU-05
+Nombre
+Consultar métricas diarias (ocupación, ADR, revenue)
+Actor principal
+Revenue Manager
+Precondición
+El sistema contiene datos de DailyMetrics para al menos alguna fecha dentro del rango solicitado.
+Postcondición
+El Revenue Manager visualiza los KPIs y la gráfica de tendencia para el periodo seleccionado.
+Flujo principal
+1. El Revenue Manager accede a la pantalla 'Dashboard'.
+2. Selecciona un rango de fechas mediante los campos de inicio y fin.
+3. El frontend envía GET /metrics?startDate=...&endDate=...
+4. El MetricsService consulta DailyMetrics para el rango especificado.
+5. Calcula los KPIs agregados: ocupación promedio, ADR promedio, revenue total, RevPAR.
+6. Retorna la serie temporal de valores diarios.
+7. El frontend renderiza los KPIs en tarjetas y la evolución en una gráfica de líneas (Chart.js).
+8. Se muestra el número de alertas activas como indicador adicional en el dashboard.
+Flujos alternativos
+4a. No hay datos para el rango solicitado: el sistema retorna lista vacía y el dashboard muestra ceros.
+2a. El usuario no selecciona fechas: se usa el rango predeterminado (últimos 30 días).
+Excepciones
+Si la fecha inicio es posterior a la fecha fin, el sistema retorna error de validación.
+Restricciones
+El rango máximo recomendado es de 365 días para mantener tiempo de respuesta < 2 segundos.
+
+C. Módulo de Recomendaciones
+
+CU-06: Consultar recomendaciones de precios por rango de fechas
+ID
+CU-06
+Nombre
+Consultar recomendaciones de precios por rango de fechas
+Actor principal
+Revenue Manager
+Precondición
+Existen métricas y/o tarifas de mercado en el rango solicitado. El hotel tiene configurado un precio base.
+Postcondición
+Las recomendaciones son generadas y persistidas en la tabla Recommendations. Las alertas correspondientes a acciones no HOLD son sincronizadas en la tabla Alerts.
+Flujo principal
+1. El Revenue Manager navega a la pantalla 'Recommendations'.
+2. Selecciona el rango de fechas de interés.
+3. El frontend envía GET /recommendations?startDate=...&endDate=...
+4. El RecommendationService consulta en paralelo DailyMetrics y MarketRates para el rango.
+5. Para cada fecha: calcula priceDiffPct = (yourPrice - marketAverage) / marketAverage * 100.
+6. Aplica reglas: INCREASE si ocupación > 70% y priceDiffPct < -10%; DECREASE si ocupación < 30% y priceDiffPct > +10%; HOLD en otros casos.
+7. Calcula el precio sugerido aplicando el factor de demanda y factor de mercado (±20% máximo).
+8. Guarda o actualiza cada recomendación (upsert por hotel + fecha).
+9. Sincroniza alertas: crea alertas activas para recomendaciones INCREASE o DECREASE.
+10. Retorna la lista de recomendaciones con acción, precio sugerido, precio actual, promedio de mercado y explicación.
+11. El frontend muestra la tabla con badges de color (verde=INCREASE, rojo=DECREASE, gris=HOLD).
+Flujos alternativos
+4a. No hay métricas para una fecha específica: se genera recomendación HOLD con precio igual al precio base.
+4b. No hay tarifas de mercado para una fecha: se evalúa solo con datos de ocupación.
+9a. Ya existe una alerta para esa recomendación: se actualiza en lugar de duplicar.
+Excepciones
+Si no hay ningún dato disponible para el rango, el sistema retorna lista vacía sin errores.
+Restricciones
+El algoritmo aplica umbrales configurables. El ajuste de precio está limitado a ±20% respecto al precio base.
+
+D. Módulo de Alertas
+
+CU-07: Consultar y gestionar alertas activas
+ID
+CU-07
+Nombre
+Consultar y gestionar alertas activas
+Actor principal
+Revenue Manager
+Precondición
+El sistema contiene alertas generadas a partir de recomendaciones no HOLD.
+Postcondición
+El Revenue Manager visualiza las alertas activas y puede marcarlas como resueltas. Las alertas resueltas quedan registradas para auditoría.
+Flujo principal
+1. El Revenue Manager navega a la pantalla 'Alerts'.
+2. Aplica filtros opcionales: estado (activa / resuelta) y rango de fechas.
+3. El frontend envía GET /alerts?resolved=false&startDate=...&endDate=...
+4. El AlertsService consulta la tabla Alerts con los filtros indicados.
+5. Retorna la lista de alertas con severidad (low/medium/high), fecha, tipo de acción y mensaje.
+6. El frontend muestra la tabla con código de colores por severidad.
+7. El Revenue Manager puede hacer clic en 'Resolver' para marcar una alerta como resuelta.
+8. El sistema actualiza el campo resolved=true y registra la fecha de resolución.
+Flujos alternativos
+2a. Sin filtros aplicados: se muestran todas las alertas activas por defecto.
+7a. El usuario cambia el filtro a 'Resueltas': se muestran alertas históricas.
+8a. La alerta ya estaba resuelta: el sistema confirma sin error.
+Excepciones
+Si el sistema no puede actualizar el estado de una alerta, muestra mensaje de error sin cambiar el estado.
+Restricciones
+Las alertas de severidad 'high' corresponden a recomendaciones INCREASE con alta demanda o DECREASE con baja crítica. No se pueden eliminar alertas, solo resolverlas.
+
+E. Módulo de Reportes
+
+CU-08: Generar reporte de pickup de reservas
+ID
+CU-08
+Nombre
+Generar reporte de pickup de reservas
+Actor principal
+Revenue Manager
+Precondición
+El sistema contiene reservas en ReservationRaw con fecha de entrada en el rango solicitado.
+Postcondición
+El Revenue Manager visualiza el reporte de pickup que muestra cuántas reservas adicionales se han generado para cada fecha de llegada en distintos momentos antes del check-in.
+Flujo principal
+1. El Revenue Manager accede a la sección de reportes.
+2. Selecciona el reporte 'Pickup de Reservas' y el rango de fechas de llegada.
+3. El frontend envía GET /reports/pickup?startDate=...&endDate=...
+4. El ReportsService agrupa las reservas por fecha de llegada y fecha de creación.
+5. Calcula el incremento de reservas en ventanas de tiempo: 90, 60, 30, 14 y 7 días antes.
+6. Retorna la tabla de pickup con la distribución de reservas por anticipación.
+7. El frontend muestra la tabla con la dinámica de acumulación de reservas.
+Flujos alternativos
+4a. No hay reservas para alguna fecha del rango: esa fecha aparece con valores en cero.
+Excepciones
+Si el rango de fechas está vacío, retorna error de validación.
+Restricciones
+El reporte requiere datos de creación de reserva (fecha entered on) en ReservationRaw.
+
+CU-09: Generar reporte de varianza de pronóstico (Forecast Variance)
+ID
+CU-09
+Nombre
+Generar reporte de varianza de pronóstico (Forecast Variance)
+Actor principal
+Revenue Manager
+Precondición
+El sistema contiene datos de pronóstico (B_FORE) y datos reales (A_STAT) para el rango solicitado.
+Postcondición
+El Revenue Manager visualiza la diferencia entre los valores pronosticados y los valores reales de ocupación, ADR y revenue para identificar desviaciones en el forecast.
+Flujo principal
+1. El Revenue Manager selecciona el reporte 'Varianza de Pronóstico' y el rango de fechas.
+2. El frontend envía GET /reports/forecast-variance?startDate=...&endDate=...
+3. El ReportsService consulta DailyMetrics y separa los valores reales de los pronosticados.
+4. Calcula para cada fecha: varianza absoluta y porcentual de ocupación, ADR y revenue.
+5. Identifica fechas con varianza superior al umbral de ±15% como alertas de desviación.
+6. Retorna la tabla con real, pronóstico y varianza por fecha.
+7. El frontend resalta en rojo las filas con varianza significativa.
+Flujos alternativos
+3a. Solo hay datos reales sin pronóstico: se muestra solo la columna real con pronóstico en N/A.
+3b. Solo hay pronóstico sin datos reales: se muestra la columna de pronóstico con real en N/A.
+Excepciones
+Si no hay ningún tipo de datos para el rango, el sistema retorna lista vacía.
+Restricciones
+El umbral de alerta de varianza es configurable. Por defecto es ±15%.
+
+CU-10: Generar reporte de posición de mercado
+ID
+CU-10
+Nombre
+Generar reporte de posición de mercado
+Actor principal
+Revenue Manager
+Precondición
+El sistema contiene datos de MarketRates y CompetitorMarketRates para el rango solicitado.
+Postcondición
+El Revenue Manager visualiza la posición tarifaria del hotel respecto a su set competitivo, incluyendo el precio propio, el promedio de mercado, y el precio de cada competidor por fecha.
+Flujo principal
+1. El Revenue Manager selecciona el reporte 'Posición de Mercado' y el rango de fechas.
+2. El frontend envía GET /reports/market-position?startDate=...&endDate=...
+3. El ReportsService consulta MarketRates y CompetitorMarketRates para el rango.
+4. Calcula por fecha: diferencia absoluta y porcentual entre yourPrice y marketAverage.
+5. Identifica días en los que el hotel está más de un 10% por encima o por debajo del mercado.
+6. Retorna la tabla con precio propio, promedio de mercado, precio de cada competidor y posición relativa.
+7. El frontend muestra la tabla con indicadores visuales de posición (↑↓=).
+Flujos alternativos
+3a. No hay datos de competencia para algunas fechas: esas fechas muestran marketAverage como N/A.
+3b. Solo hay datos propios sin competencia: se muestra yourPrice sin comparación.
+Excepciones
+Si no hay datos de mercado para el rango completo, el sistema retorna los datos disponibles con advertencia.
+Restricciones
+Solo muestra competidores que tienen al menos un precio registrado en el rango solicitado.
+
+CU-11: Generar resumen ejecutivo
+ID
+CU-11
+Nombre
+Generar resumen ejecutivo
+Actor principal
+Revenue Manager
+Precondición
+El sistema contiene datos de métricas, recomendaciones, alertas y posición de mercado para el periodo solicitado.
+Postcondición
+El Revenue Manager recibe un resumen consolidado con los KPIs clave, el estado de las recomendaciones y las alertas más relevantes del periodo.
+Flujo principal
+1. El Revenue Manager selecciona el reporte 'Resumen Ejecutivo' y el periodo.
+2. El frontend envía GET /reports/executive-summary?startDate=...&endDate=...
+3. El ReportsService ejecuta en paralelo las consultas de métricas, recomendaciones y alertas.
+4. Consolida: ocupación promedio, ADR promedio, RevPAR, revenue total, distribución de recomendaciones (INCREASE/DECREASE/HOLD) y número de alertas por severidad.
+5. Calcula el ingreso potencial no capturado (suma de días DECREASE con revenue subóptimo).
+6. Retorna el objeto de resumen ejecutivo.
+7. El frontend muestra un panel con KPIs, gráfica de distribución de recomendaciones y listado de alertas críticas.
+Flujos alternativos
+3a. No hay recomendaciones generadas: la distribución aparece en cero.
+3b. No hay alertas activas: se indica 'Sin alertas activas en el periodo'.
+Excepciones
+Si no hay datos de ningún tipo para el periodo, el sistema retorna todos los indicadores en cero con aviso.
+Restricciones
+El resumen ejecutivo consolida todas las fuentes disponibles; no es necesario que estén todas presentes.
+
+CU-12: Generar reporte de reconciliación CRS vs. RMS
+ID
+CU-12
+Nombre
+Generar reporte de reconciliación CRS vs. RMS
+Actor principal
+Revenue Manager
+Precondición
+El sistema contiene snapshots de CrsRoomRateDistributionSnapshot y datos de DailyMetrics para el periodo solicitado.
+Postcondición
+El Revenue Manager visualiza las diferencias entre los totales reportados por el CRS (Opera Cloud) y los calculados por el RMS (sistema local), identificando posibles discrepancias de datos.
+Flujo principal
+1. El Revenue Manager selecciona el reporte 'Reconciliación CRS' y el periodo.
+2. El frontend envía GET /reports/crs-reconciliation?startDate=...&endDate=...
+3. El ReportsService consulta CrsRoomRateDistributionSnapshot y DailyMetrics para el rango.
+4. Compara los valores de revenue y habitaciones vendidas entre ambas fuentes.
+5. Calcula la diferencia absoluta y porcentual por fecha.
+6. Retorna la tabla de reconciliación indicando concordancia o discrepancia por día.
+7. El frontend resalta en color las fechas con discrepancia superior al 5%.
+Flujos alternativos
+3a. No hay snapshots CRS para el periodo: se indica que no hay datos CRS para comparar.
+3b. Solo hay snapshots CRS sin métricas RMS: se muestra solo la columna CRS.
+Excepciones
+Si los datos de ambas fuentes son inconsistentes en formato, el sistema retorna error con detalle.
+Restricciones
+El umbral de discrepancia aceptable es 5%. Valores fuera de ese rango se resaltan como revisión obligatoria.
+
+CU-13: Generar reporte de cumplimiento de recomendaciones
+ID
+CU-13
+Nombre
+Generar reporte de cumplimiento de recomendaciones
+Actor principal
+Revenue Manager
+Precondición
+El sistema contiene recomendaciones generadas y el Revenue Manager ha registrado manualmente las tarifas aplicadas (o bien el sistema las compara con los datos históricos de ADR resultantes).
+Postcondición
+El Revenue Manager visualiza en qué porcentaje las recomendaciones del sistema fueron seguidas, y cuál fue el impacto en el ADR real de los días donde se siguieron vs. donde no.
+Flujo principal
+1. El Revenue Manager selecciona el reporte 'Cumplimiento de Recomendaciones' y el periodo.
+2. El frontend envía GET /reports/recommendation-compliance?startDate=...&endDate=...
+3. El ReportsService consulta Recommendations y DailyMetrics para el mismo rango.
+4. Para cada fecha con recomendación INCREASE: verifica si el ADR real del día posterior fue mayor al precio base.
+5. Para cada fecha con recomendación DECREASE: verifica si el ADR real fue menor.
+6. Calcula el porcentaje de recomendaciones seguidas y no seguidas.
+7. Compara el RevPAR promedio en días con cumplimiento vs. sin cumplimiento.
+8. Retorna el reporte con métricas de cumplimiento y análisis de impacto.
+Flujos alternativos
+4a. No hay ADR real para una fecha (sin reservas): se omite del análisis de cumplimiento.
+3a. No hay recomendaciones para el periodo: retorna reporte vacío con aviso.
+Excepciones
+El análisis es aproximado: no verifica directamente la tarifa publicada, sino el ADR resultante.
+Restricciones
+El cumplimiento se infiere comparando el ADR real con el precio sugerido; no requiere entrada manual del usuario.
+
+CU-14: Generar reporte de oportunidad de ingresos (Revenue Opportunity)
+ID
+CU-14
+Nombre
+Generar reporte de oportunidad de ingresos (Revenue Opportunity)
+Actor principal
+Revenue Manager
+Precondición
+El sistema contiene recomendaciones INCREASE o DECREASE con precio sugerido para el periodo.
+Postcondición
+El Revenue Manager visualiza el ingreso potencial no capturado: diferencia entre el ingreso real y el ingreso que se habría obtenido siguiendo el precio sugerido por el sistema.
+Flujo principal
+1. El Revenue Manager selecciona el reporte 'Oportunidad de Ingresos' y el periodo.
+2. El frontend envía GET /reports/revenue-opportunity?startDate=...&endDate=...
+3. El ReportsService consulta Recommendations y DailyMetrics para el rango.
+4. Para días INCREASE: calcula (suggestedPrice - yourPrice) × habitaciones vendidas.
+5. Para días DECREASE: estima el aumento de ocupación potencial si se hubiera bajado el precio, y calcula el revenue adicional.
+6. Suma el total de oportunidad de ingresos no capturada en el periodo.
+7. Retorna la tabla detallada por fecha y el total agregado.
+8. El frontend muestra el monto total de oportunidad destacado como KPI principal.
+Flujos alternativos
+3a. Solo hay recomendaciones HOLD para el periodo: la oportunidad es MXN $0 y se indica que el pricing estuvo óptimo.
+5a. No hay datos de ocupación real para días DECREASE: se omite el cálculo estimado de ocupación.
+Excepciones
+El cálculo de oportunidad en días DECREASE es una estimación basada en elasticidad de demanda simplificada; se presenta como indicativo.
+Restricciones
+El reporte es de carácter indicativo; el impacto real depende de factores de mercado no modelados.
+
+F. Módulo de Configuración
+
+CU-15: Registrar nuevo hotel en el sistema
+ID
+CU-15
+Nombre
+Registrar nuevo hotel en el sistema
+Actor principal
+Administrador del sistema
+Precondición
+El administrador tiene acceso al sistema con permisos de administración. El hotel no está previamente registrado.
+Postcondición
+El hotel queda registrado en la tabla Hotel con su código, nombre y precio base. Todas las operaciones de ingesta y análisis posteriores quedan vinculadas a ese hotel.
+Flujo principal
+1. El administrador accede al endpoint de configuración.
+2. Proporciona: nombre del hotel, código corto (p. ej. WGLM), número de habitaciones disponibles y precio base.
+3. El sistema valida que el código no esté duplicado.
+4. Crea el registro en la tabla Hotel.
+5. Retorna confirmación con el ID asignado al hotel.
+Flujos alternativos
+3a. El código ya existe: el sistema retorna error 409 (conflicto).
+Excepciones
+Si faltan campos obligatorios (nombre, código, habitaciones), retorna error 400.
+Restricciones
+El código del hotel debe ser único. El número de habitaciones disponibles se usa como divisor en el cálculo de ocupación.
+
+CU-16: Registrar o actualizar competidor del set competitivo
+ID
+CU-16
+Nombre
+Registrar o actualizar competidor del set competitivo
+Actor principal
+Revenue Manager / Administrador del sistema
+Precondición
+El hotel está registrado. El competidor puede ser nuevo o ya existir en el sistema.
+Postcondición
+El competidor queda registrado o actualizado en la tabla Competitor, vinculado al hotel. Sus precios futuros de Excel serán asociados a este registro.
+Flujo principal
+1. El Revenue Manager carga un archivo Excel de Expedia (CU-04).
+2. El sistema detecta los nombres de hoteles en las filas del Excel.
+3. Si el nombre no coincide con ningún Competitor existente del hotel, crea un nuevo registro.
+4. Si ya existe, reutiliza el registro existente para asociar los precios.
+5. Los precios se almacenan en CompetitorMarketRates con referencia al Competitor.
+Flujos alternativos
+3a. El nombre del hotel en el Excel difiere ligeramente del registrado (mayúsculas, espacios): el sistema intenta coincidencia aproximada; si no hay match, crea nuevo registro.
+1a. El administrador registra manualmente un competidor sin cargar Excel: puede hacerlo mediante endpoint POST /competitors.
+Excepciones
+Si se detectan más de 20 competidores distintos en un solo archivo Excel, el sistema notifica al administrador.
+Restricciones
+Cada competidor está vinculado a un hotel específico. El nombre del competidor proviene directamente del Excel de Expedia.
+
+G. Resumen de Actores y Casos de Uso
+
+ID
+Nombre del Caso de Uso
+Actor Principal
+Módulo
+CU-01
+Cargar archivo XML de reservas (Reservation Entered On)
+Revenue Manager
+Ingesta
+CU-02
+Cargar archivo XML de histórico y pronóstico (History and Forecast)
+Revenue Manager
+Ingesta
+CU-03
+Cargar archivo XML de distribución de tarifas CRS (RoomRateDistribution)
+Revenue Manager
+Ingesta
+CU-04
+Cargar grilla de precios de competencia desde Expedia (Excel)
+Revenue Manager
+Ingesta
+CU-05
+Consultar métricas diarias (ocupación, ADR, revenue)
+Revenue Manager
+Métricas
+CU-06
+Consultar recomendaciones de precios por rango de fechas
+Revenue Manager
+Recomendaciones
+CU-07
+Consultar y gestionar alertas activas
+Revenue Manager
+Alertas
+CU-08
+Generar reporte de pickup de reservas
+Revenue Manager
+Reportes
+CU-09
+Generar reporte de varianza de pronóstico (Forecast Variance)
+Revenue Manager
+Reportes
+CU-10
+Generar reporte de posición de mercado
+Revenue Manager
+Reportes
+CU-11
+Generar resumen ejecutivo
+Revenue Manager
+Reportes
+CU-12
+Generar reporte de reconciliación CRS vs. RMS
+Revenue Manager
+Reportes
+CU-13
+Generar reporte de cumplimiento de recomendaciones
+Revenue Manager
+Reportes
+CU-14
+Generar reporte de oportunidad de ingresos (Revenue Opportunity)
+Revenue Manager
+Reportes
+CU-15
+Registrar nuevo hotel en el sistema
+Administrador del sistema
+Configuración
+CU-16
+Registrar o actualizar competidor del set competitivo
+Revenue Manager / Administrador del sistema
+Configuración

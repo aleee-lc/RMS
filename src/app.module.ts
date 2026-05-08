@@ -11,6 +11,7 @@ import { ReportsModule } from './reports/reports.module';
 import { HotelsModule } from './hotels/hotels.module';
 import { CompetitorsModule } from './competitors/competitors.module';
 import { RateShoppingModule } from './rate-shopping/rate-shopping.module';
+import { BiModule } from './bi/bi.module';
 
 @Module({
   imports: [
@@ -25,7 +26,8 @@ import { RateShoppingModule } from './rate-shopping/rate-shopping.module';
     ReportsModule,
     HotelsModule,
     CompetitorsModule,
-    RateShoppingModule
+    RateShoppingModule,
+    BiModule
   ]
 })
 export class AppModule {}

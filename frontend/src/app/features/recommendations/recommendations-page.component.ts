@@ -13,9 +13,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { DateRange } from '../../core/models/date-range.model';
 import {
-  DEFAULT_RECOMMENDATION_GENERATION_OPTIONS,
   RecommendationAction,
-  RecommendationGenerationOptions,
   RecommendationItem
 } from '../../core/models/recommendation.model';
 import { RecommendationsService } from '../../core/services/recommendations.service';
@@ -72,20 +70,6 @@ export class RecommendationsPageComponent {
   readonly actionFilter = signal<'all' | RecommendationAction>('all');
   readonly marketFilter = signal<MarketFilter>('all');
   readonly minOccupancyFilter = signal<number>(0);
-  readonly generationOptions = signal<RecommendationGenerationOptions>({
-    ...DEFAULT_RECOMMENDATION_GENERATION_OPTIONS
-  });
-
-  readonly generationConfigError = computed(() => {
-    const options = this.generationOptions();
-    if (options.lowOccupancyThreshold >= options.highOccupancyThreshold) {
-      return 'La ocupacion baja debe ser menor que la ocupacion alta.';
-    }
-    if (options.minActionStepPct > options.maxAdjustmentPct) {
-      return 'El paso minimo no puede ser mayor que el ajuste maximo.';
-    }
-    return null;
-  });
 
   readonly displayedColumns = [
     'date',
@@ -172,17 +156,10 @@ export class RecommendationsPageComponent {
   }
 
   onGenerateClick(): void {
-    if (this.generationConfigError()) {
-      this.errorMessage.set(this.generationConfigError());
-      return;
-    }
-
     this.generating.set(true);
     this.errorMessage.set(null);
 
-    this.recommendationsService
-      .generateRecommendations(this.dateRange(), this.generationOptions())
-      .subscribe({
+    this.recommendationsService.generateRecommendations(this.dateRange()).subscribe({
       next: (response) => {
         this.items.set(response.items);
         this.hotelRooms.set(response.hotel.totalRooms);
@@ -193,26 +170,6 @@ export class RecommendationsPageComponent {
         this.errorMessage.set('No se pudo generar recomendaciones. Revisa metricas y mercado cargado.');
         this.generating.set(false);
       }
-    });
-  }
-
-  onGenerationOptionChange<K extends keyof RecommendationGenerationOptions>(
-    key: K,
-    value: number
-  ): void {
-    if (!Number.isFinite(value)) {
-      return;
-    }
-
-    this.generationOptions.update((current) => ({
-      ...current,
-      [key]: value
-    }));
-  }
-
-  onResetGenerationOptions(): void {
-    this.generationOptions.set({
-      ...DEFAULT_RECOMMENDATION_GENERATION_OPTIONS
     });
   }
 

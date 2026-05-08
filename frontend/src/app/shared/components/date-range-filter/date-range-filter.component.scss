@@ -1,32 +1,37 @@
-﻿.date-range-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
+.date-range-form {
   align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(260px, 1fr) auto;
 }
 
 .range-field {
-  min-width: 320px;
-  flex: 1 1 380px;
+  min-width: 0;
 }
 
 button {
-  height: 56px;
+  height: 48px;
 }
 
 .preset-row {
+  align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-  align-items: center;
 }
 
 .preset-label {
-  font-size: 0.8rem;
   color: var(--text-soft);
+  font-size: 0.8rem;
   font-weight: 600;
 }
 
 .preset-row button {
-  height: 36px;
+  height: 34px;
+}
+
+@media (max-width: 760px) {
+  .date-range-form {
+    grid-template-columns: 1fr;
+  }
 }

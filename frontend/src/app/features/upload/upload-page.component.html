@@ -1,12 +1,31 @@
 ﻿<section class="page">
-  <div class="page-header">
+  <div class="page-header upload-header">
     <div class="page-title">
-      <h1>Ingesta de datos</h1>
-      <p>Carga informacion de PMS/CRS y mercado en un flujo guiado.</p>
+      <span class="eyebrow">Administration</span>
+      <h1>Upload Center</h1>
+      <p>Control de fuentes operativas para pickup, forecast y comp set.</p>
     </div>
   </div>
 
+  <div class="source-grid">
+    <article class="source-card" *ngFor="let source of sourceStatusCards()">
+      <mat-icon>{{ source.icon }}</mat-icon>
+      <div>
+        <strong>{{ source.label }}</strong>
+        <span>{{ source.source }}</span>
+      </div>
+      <div class="source-status">
+        <span>{{ source.status }}</span>
+        <strong>{{ source.metric }}</strong>
+      </div>
+    </article>
+  </div>
+
   <mat-card class="section-card">
+    <mat-card-header>
+      <mat-card-title>Data Processing</mat-card-title>
+      <mat-card-subtitle>Validacion, carga y recalculo operativo</mat-card-subtitle>
+    </mat-card-header>
     <mat-card-content class="wizard-grid">
       <article class="step">
         <header>
@@ -36,8 +55,12 @@
           <h2>Valida archivo</h2>
         </header>
 
-        <p class="hint" *ngIf="selectedType() === 'xml'">Acepta reportes XML de reservas, historico/pronostico y distribucion CRS.</p>
-        <p class="hint" *ngIf="selectedType() === 'excel'">Acepta grilla de precios Expedia en formato .xlsx o .xls.</p>
+        <p class="hint" *ngIf="selectedType() === 'xml'">
+          Acepta reportes XML de reservas, historico/pronostico y distribucion CRS.
+        </p>
+        <p class="hint" *ngIf="selectedType() === 'excel'">
+          Acepta grilla de precios Expedia en formato .xlsx o .xls.
+        </p>
 
         <input
           #fileInput
@@ -48,7 +71,12 @@
         />
 
         <div class="inline-actions">
-          <button mat-stroked-button type="button" (click)="fileInput.click()" [disabled]="uploading()">
+          <button
+            mat-stroked-button
+            type="button"
+            (click)="fileInput.click()"
+            [disabled]="uploading()"
+          >
             <mat-icon>attach_file</mat-icon>
             Seleccionar archivo
           </button>
@@ -56,7 +84,11 @@
         </div>
 
         <ul class="check-list">
-          <li *ngFor="let check of validationItems()" [class.ok]="check.ok" [class.fail]="!check.ok">
+          <li
+            *ngFor="let check of validationItems()"
+            [class.ok]="check.ok"
+            [class.fail]="!check.ok"
+          >
             <mat-icon>{{ check.ok ? 'check_circle' : 'cancel' }}</mat-icon>
             <span>{{ check.label }}</span>
           </li>
@@ -81,6 +113,10 @@
         </button>
 
         <mat-progress-bar *ngIf="uploading()" mode="indeterminate"></mat-progress-bar>
+
+        <p class="hint" *ngIf="selectedType() === 'excel'">
+          Esta carga recalcula recomendaciones y alertas automaticamente con base en el comp set.
+        </p>
 
         <div class="state-card" *ngIf="errorMessage() as error">
           <strong>Error:</strong> {{ error }}

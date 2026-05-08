@@ -21,6 +21,6 @@ describe('AppComponent', () => {
     const fixture = TestBed.createComponent(AppComponent);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.brand span')?.textContent).toContain('RMS Console');
+    expect(compiled.querySelector('.brand-logo')?.getAttribute('alt')).toBe('RevSight');
   });
 });

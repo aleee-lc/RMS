@@ -13,18 +13,36 @@ import { MatIconModule } from '@angular/material/icon';
     RouterLink,
     RouterLinkActive,
     MatIconModule,
-    MatButtonModule
+    MatButtonModule,
   ],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+  styleUrl: './app.component.scss',
 })
 export class AppComponent {
-  readonly navItems = [
-    { label: 'Dashboard', icon: 'monitoring', path: '/dashboard' },
-    { label: 'Ingesta', icon: 'upload_file', path: '/upload' },
-    { label: 'Recomendaciones', icon: 'lightbulb', path: '/recommendations' },
-    { label: 'Alertas', icon: 'notifications_active', path: '/alerts' },
-    { label: 'Reportes', icon: 'summarize', path: '/reports' },
-    { label: 'Configuracion', icon: 'settings', path: '/configuration' }
+  readonly navGroups = [
+    {
+      label: 'Command',
+      items: [
+        { label: 'Revenue Command Center', icon: 'monitoring', path: '/revenue-intelligence' },
+      ],
+    },
+    {
+      label: 'Actions',
+      items: [
+        { label: 'Action Center', icon: 'task_alt', path: '/recommendations' },
+        { label: 'Alerts Center', icon: 'notifications_active', path: '/alerts' },
+      ],
+    },
+    {
+      label: 'Data',
+      items: [
+        { label: 'Upload Center', icon: 'upload_file', path: '/upload' },
+        { label: 'Reports & Exports', icon: 'summarize', path: '/reports' },
+      ],
+    },
+    {
+      label: 'Admin',
+      items: [{ label: 'Configuration', icon: 'settings', path: '/configuration' }],
+    },
   ];
 }

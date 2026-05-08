@@ -58,6 +58,33 @@ describe('ConfigurationPageComponent', () => {
           timezone: 'America/Chihuahua'
         }
       })
+    ),
+    getRecommendationSettings: vi.fn(() =>
+      of({
+        isDefault: true,
+        item: {
+          highOccupancyThreshold: 70,
+          lowOccupancyThreshold: 30,
+          significantDiffPct: 5,
+          demandWeight: 0.5,
+          marketWeight: 0.6,
+          maxAdjustmentPct: 5,
+          minActionStepPct: 5
+        }
+      })
+    ),
+    updateRecommendationSettings: vi.fn(() =>
+      of({
+        item: {
+          highOccupancyThreshold: 72,
+          lowOccupancyThreshold: 28,
+          significantDiffPct: 5,
+          demandWeight: 0.5,
+          marketWeight: 0.6,
+          maxAdjustmentPct: 5,
+          minActionStepPct: 5
+        }
+      })
     )
   };
 

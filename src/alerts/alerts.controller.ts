@@ -44,6 +44,7 @@ export class AlertsController {
       items: alerts.map((alert) => ({
         id: alert.id,
         date: alert.date.toISOString().slice(0, 10),
+        type: alert.type,
         severity: alert.severity.toLowerCase(),
         title: alert.title,
         message: alert.message,
@@ -65,6 +66,7 @@ export class AlertsController {
       item: {
         id: alert.id,
         date: alert.date.toISOString().slice(0, 10),
+        type: alert.type,
         severity: alert.severity.toLowerCase(),
         title: alert.title,
         message: alert.message,
@@ -86,6 +88,7 @@ export class AlertsController {
       item: {
         id: alert.id,
         date: alert.date.toISOString().slice(0, 10),
+        type: alert.type,
         severity: alert.severity.toLowerCase(),
         title: alert.title,
         message: alert.message,

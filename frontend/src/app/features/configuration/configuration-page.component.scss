@@ -73,6 +73,20 @@
   flex: 1 1 280px;
 }
 
+.settings-meta {
+  margin-bottom: var(--space-2);
+  color: var(--text-soft);
+  font-size: 0.82rem;
+}
+
+.state-card.compact {
+  margin-top: var(--space-2);
+}
+
+.help-icon {
+  color: var(--brand-600);
+}
+
 @media (max-width: 780px) {
   .form-grid {
     grid-template-columns: 1fr;

@@ -4,6 +4,8 @@ import { IngestionController } from './ingestion.controller';
 import { IngestionService } from './ingestion.service';
 import { MetricsModule } from '../metrics/metrics.module';
 import { MarketModule } from '../market/market.module';
+import { RecommendationModule } from '../recommendation/recommendation.module';
+import { AlertsModule } from '../alerts/alerts.module';
 
 @Module({
   imports: [
@@ -13,7 +15,9 @@ import { MarketModule } from '../market/market.module';
       }
     }),
     MetricsModule,
-    MarketModule
+    MarketModule,
+    RecommendationModule,
+    AlertsModule
   ],
   controllers: [IngestionController],
   providers: [IngestionService]

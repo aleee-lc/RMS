@@ -1,50 +1,53 @@
 ﻿import { Routes } from '@angular/router';
 import { AlertsPageComponent } from './features/alerts/alerts-page.component';
 import { ConfigurationPageComponent } from './features/configuration/configuration-page.component';
-import { DashboardPageComponent } from './features/dashboard/dashboard-page.component';
 import { RecommendationsPageComponent } from './features/recommendations/recommendations-page.component';
 import { ReportsPageComponent } from './features/reports/reports-page.component';
+import { RevenueIntelligencePageComponent } from './features/revenue-intelligence/revenue-intelligence-page.component';
 import { UploadPageComponent } from './features/upload/upload-page.component';
 
 export const routes: Routes = [
   {
     path: '',
     pathMatch: 'full',
-    redirectTo: 'dashboard'
+    redirectTo: 'revenue-intelligence',
   },
   {
     path: 'dashboard',
-    component: DashboardPageComponent,
-    title: 'Dashboard'
+    redirectTo: 'revenue-intelligence',
   },
   {
     path: 'upload',
     component: UploadPageComponent,
-    title: 'Ingesta de Datos'
+    title: 'RevSight | Ingesta de Datos',
   },
   {
     path: 'recommendations',
     component: RecommendationsPageComponent,
-    title: 'Recomendaciones de Precio'
+    title: 'RevSight | Action Center',
+  },
+  {
+    path: 'revenue-intelligence',
+    component: RevenueIntelligencePageComponent,
+    title: 'RevSight | Revenue Intelligence',
   },
   {
     path: 'alerts',
     component: AlertsPageComponent,
-    title: 'Alertas'
+    title: 'RevSight | Alerts Center',
   },
   {
     path: 'reports',
     component: ReportsPageComponent,
-    title: 'Reportes'
+    title: 'RevSight | Reports & Exports',
   },
   {
     path: 'configuration',
     component: ConfigurationPageComponent,
-    title: 'Configuracion'
+    title: 'RevSight | Configuracion',
   },
   {
     path: '**',
-    redirectTo: 'dashboard'
-  }
+    redirectTo: 'revenue-intelligence',
+  },
 ];
-

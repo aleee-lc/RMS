@@ -1,8 +1,9 @@
 ﻿<section class="page">
   <div class="page-header">
     <div class="page-title">
-      <h1>Hub de reportes</h1>
-      <p>Consulta operativa y ejecutiva con salida exportable para analisis externo.</p>
+      <span class="eyebrow">Data</span>
+      <h1>Reports & Exports</h1>
+      <p>Soporte de auditoria, reconciliacion y exportacion para analisis externo.</p>
     </div>
 
     <div class="inline-actions">
@@ -10,7 +11,12 @@
         <mat-icon>refresh</mat-icon>
         Recargar todo
       </button>
-      <button mat-flat-button color="primary" (click)="onReloadParameterizedReports()" [disabled]="loading()">
+      <button
+        mat-flat-button
+        color="primary"
+        (click)="onReloadParameterizedReports()"
+        [disabled]="loading()"
+      >
         <mat-icon>tune</mat-icon>
         Recalcular parametricos
       </button>
@@ -176,7 +182,9 @@
             </thead>
             <tbody>
               <tr *ngFor="let row of secondary.rows">
-                <td *ngFor="let column of secondary.columns">{{ formatCell(column, row[column]) }}</td>
+                <td *ngFor="let column of secondary.columns">
+                  {{ formatCell(column, row[column]) }}
+                </td>
               </tr>
             </tbody>
           </table>

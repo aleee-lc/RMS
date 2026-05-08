@@ -1,0 +1,22 @@
+.market-cell {
+  display: grid;
+  gap: 2px;
+}
+
+.market-cell strong {
+  color: #334155;
+  font-size: 0.82rem;
+}
+
+.market-cell span {
+  color: #64748b;
+  font-size: 0.7rem;
+}
+
+.market-cell.below strong {
+  color: #047857;
+}
+
+.market-cell.above strong {
+  color: #b91c1c;
+}

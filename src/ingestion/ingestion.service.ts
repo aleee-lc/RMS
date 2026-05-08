@@ -1,10 +1,13 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { RecommendationAction } from '@prisma/client';
 import { XMLParser } from 'fast-xml-parser';
+import { AlertsService } from '../alerts/alerts.service';
 import { MarketService } from '../market/market.service';
 import { MetricsService } from '../metrics/metrics.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { parseDmyDate, parseOperaDate } from '../common/utils/date.util';
+import { parseDmyDate, parseIsoDate, parseOperaDate } from '../common/utils/date.util';
 import { round2, toNumber } from '../common/utils/number.util';
+import { RecommendationService } from '../recommendation/recommendation.service';
 
 interface ReservationXmlRow {
   hotelId: number;
@@ -70,7 +73,9 @@ export class IngestionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly metricsService: MetricsService,
-    private readonly marketService: MarketService
+    private readonly marketService: MarketService,
+    private readonly recommendationService: RecommendationService,
+    private readonly alertsService: AlertsService
   ) {}
 
   async ingestXml(fileBuffer: Buffer, fileName: string, hotelId: number) {
@@ -98,7 +103,54 @@ export class IngestionService {
   }
 
   async ingestExcel(fileBuffer: Buffer, fileName: string, hotelId: number) {
-    return this.marketService.ingestExpediaGrid(hotelId, fileName, fileBuffer);
+    const ingestion = await this.marketService.ingestExpediaGrid(hotelId, fileName, fileBuffer);
+
+    if (!ingestion.dateRange) {
+      return {
+        source_type: 'expedia_price_grid',
+        ...ingestion,
+        date_range: null,
+        recommendations_generated: 0,
+        alerts_generated_or_updated: 0
+      };
+    }
+
+    const startDate = parseIsoDate(ingestion.dateRange.start);
+    const endDate = parseIsoDate(ingestion.dateRange.end);
+
+    if (!startDate || !endDate) {
+      return {
+        source_type: 'expedia_price_grid',
+        ...ingestion,
+        date_range: ingestion.dateRange,
+        recommendations_generated: 0,
+        alerts_generated_or_updated: 0
+      };
+    }
+
+    const recommendations = await this.recommendationService.generateAndPersistRecommendations(
+      hotelId,
+      startDate,
+      endDate
+    );
+    const competitiveSetAlerts = await this.alertsService.syncCompetitiveSetAlerts(
+      hotelId,
+      startDate,
+      endDate
+    );
+    const pricingOpportunityAlerts = recommendations.filter(
+      (item) => item.action !== RecommendationAction.HOLD
+    ).length;
+
+    return {
+      source_type: 'expedia_price_grid',
+      ...ingestion,
+      date_range: ingestion.dateRange,
+      recommendations_generated: recommendations.length,
+      pricing_opportunity_alerts_generated_or_updated: pricingOpportunityAlerts,
+      competitive_set_alerts_generated_or_updated: competitiveSetAlerts,
+      alerts_generated_or_updated: pricingOpportunityAlerts + competitiveSetAlerts
+    };
   }
 
   private async ingestReservationsXml(
@@ -177,6 +229,7 @@ export class IngestionService {
       minArrival,
       maxArrival
     );
+    await this.alertsService.syncOccupancyAlerts(hotelId, minArrival, maxArrival);
 
     return {
       source_type: 'reservation_entered_on',
@@ -300,6 +353,7 @@ export class IngestionService {
         revenue: row.revenue
       }))
     });
+    await this.alertsService.syncOccupancyAlerts(hotelId, minDate, maxDate);
 
     const historyRows = rows.filter((row) => row.recType === 'A_STAT').length;
     const forecastRows = rows.filter((row) => row.recType === 'B_FORE').length;
@@ -612,10 +666,7 @@ export class IngestionService {
     }
 
     const reportObj = report as Record<string, unknown>;
-    if (
-      !reportObj.Room_Rate_Distribution ||
-      typeof reportObj.Room_Rate_Distribution !== 'object'
-    ) {
+    if (!reportObj.Room_Rate_Distribution || typeof reportObj.Room_Rate_Distribution !== 'object') {
       return null;
     }
 
@@ -634,7 +685,10 @@ export class IngestionService {
       0,
       Math.round(toNumber(this.getString(totalRow, '@_Reservation_Count')) ?? 0)
     );
-    const roomNights = Math.max(0, Math.round(toNumber(this.getString(totalRow, '@_Room_Nights')) ?? 0));
+    const roomNights = Math.max(
+      0,
+      Math.round(toNumber(this.getString(totalRow, '@_Room_Nights')) ?? 0)
+    );
     const revenue = round2(toNumber(this.getString(totalRow, '@_Revenue')) ?? 0);
     const adr = round2(toNumber(this.getString(totalRow, '@_ADR')) ?? 0);
 
@@ -702,8 +756,7 @@ export class IngestionService {
       return null;
     }
 
-    const whichDate =
-      this.getString(criteriaRaw, '@_Report_Criteria_WhichDate') || 'NOT SPECIFIED';
+    const whichDate = this.getString(criteriaRaw, '@_Report_Criteria_WhichDate') || 'NOT SPECIFIED';
     const showGroups =
       this.getString(criteriaRaw, '@_Report_Criteria_ShowGroups') || 'NOT SPECIFIED';
     const currency = this.getString(criteriaRaw, '@_Report_Criteria_Currency') || null;

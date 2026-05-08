@@ -19,18 +19,19 @@ function formatDateISO(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-function defaultRange(daysBack: number): DateRange {
-  const endDate = new Date();
+function defaultRange(daysForward: number): DateRange {
   const startDate = new Date();
-  startDate.setDate(endDate.getDate() - daysBack);
+  const endDate = new Date();
+  endDate.setDate(startDate.getDate() + daysForward);
   return {
     startDate: formatDateISO(startDate),
-    endDate: formatDateISO(endDate)
+    endDate: formatDateISO(endDate),
   };
 }
 
 type ResolvedFilter = 'all' | 'true' | 'false';
 type SeverityFilter = 'all' | 'low' | 'medium' | 'high';
+type AlertTypeFilter = 'all' | 'occupancy' | 'competitive-set' | 'pricing-opportunity';
 
 @Component({
   selector: 'app-alerts-page',
@@ -47,10 +48,10 @@ type SeverityFilter = 'all' | 'low' | 'medium' | 'high';
     MatTableModule,
     MatFormFieldModule,
     MatSelectModule,
-    DateRangeFilterComponent
+    DateRangeFilterComponent,
   ],
   templateUrl: './alerts-page.component.html',
-  styleUrl: './alerts-page.component.scss'
+  styleUrl: './alerts-page.component.scss',
 })
 export class AlertsPageComponent {
   readonly loading = signal(false);
@@ -61,13 +62,26 @@ export class AlertsPageComponent {
 
   readonly resolvedFilter = signal<ResolvedFilter>('all');
   readonly severityFilter = signal<SeverityFilter>('all');
+  readonly alertTypeFilter = signal<AlertTypeFilter>('all');
   readonly searchTerm = signal('');
 
-  readonly displayedColumns = ['date', 'severity', 'title', 'message', 'resolved', 'actions'];
+  readonly displayedColumns = [
+    'date',
+    'type',
+    'severity',
+    'title',
+    'message',
+    'resolved',
+    'actions',
+  ];
 
   readonly visibleItems = computed(() => {
     return this.items().filter((item) => {
       if (this.severityFilter() !== 'all' && item.severity !== this.severityFilter()) {
+        return false;
+      }
+
+      if (this.alertTypeFilter() !== 'all' && item.type !== this.alertTypeFilter()) {
         return false;
       }
 
@@ -91,13 +105,19 @@ export class AlertsPageComponent {
       resolved: source.filter((item) => item.resolved).length,
       high: source.filter((item) => item.severity === 'high' && !item.resolved).length,
       medium: source.filter((item) => item.severity === 'medium' && !item.resolved).length,
-      low: source.filter((item) => item.severity === 'low' && !item.resolved).length
+      low: source.filter((item) => item.severity === 'low' && !item.resolved).length,
+      occupancy: source.filter((item) => item.type === 'occupancy' && !item.resolved).length,
+      competitiveSet: source.filter((item) => item.type === 'competitive-set' && !item.resolved)
+        .length,
+      pricingOpportunity: source.filter(
+        (item) => item.type === 'pricing-opportunity' && !item.resolved,
+      ).length,
     };
   });
 
   constructor(
     private readonly alertsService: AlertsService,
-    private readonly snackBar: MatSnackBar
+    private readonly snackBar: MatSnackBar,
   ) {
     this.refresh();
   }
@@ -114,6 +134,19 @@ export class AlertsPageComponent {
 
   severityClass(severity: AlertItem['severity']): string {
     return `severity-${severity}`;
+  }
+
+  alertTypeLabel(type: AlertItem['type']): string {
+    if (type === 'occupancy') {
+      return 'Ocupacion';
+    }
+    if (type === 'competitive-set') {
+      return 'Comp set';
+    }
+    if (type === 'pricing-opportunity') {
+      return 'Oportunidad precio';
+    }
+    return type;
   }
 
   isToggling(alertId: number): boolean {
@@ -136,12 +169,12 @@ export class AlertsPageComponent {
         this.items.update((rows) => rows.map((row) => (row.id === item.id ? item : row)));
         this.togglingAlertIds.update((ids) => ids.filter((id) => id !== alert.id));
         this.snackBar.open(item.resolved ? 'Alerta resuelta.' : 'Alerta reactivada.', 'Cerrar', {
-          duration: 2200
+          duration: 2200,
         });
       },
       error: () => {
         this.togglingAlertIds.update((ids) => ids.filter((id) => id !== alert.id));
-      }
+      },
     });
   }
 
@@ -160,7 +193,7 @@ export class AlertsPageComponent {
     this.alertsService
       .getAlerts({
         ...this.dateRange(),
-        resolved
+        resolved,
       })
       .subscribe({
         next: (response) => {
@@ -170,7 +203,7 @@ export class AlertsPageComponent {
         error: () => {
           this.errorMessage.set('No fue posible obtener alertas. Verifica backend y rango.');
           this.loading.set(false);
-        }
+        },
       });
   }
 }

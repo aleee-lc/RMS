@@ -1,41 +1,57 @@
-﻿.kpi-card {
-  border-radius: var(--radius-md);
-  min-height: 150px;
+.kpi-card {
   background: linear-gradient(180deg, #ffffff, #f9fcff);
+  border-radius: var(--radius-md);
+  min-height: 132px;
+  min-width: 0;
 }
 
 .kpi-header {
-  display: flex;
   align-items: center;
-  justify-content: space-between;
   color: var(--text-soft);
+  display: grid;
   font-size: 0.82rem;
   font-weight: 700;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
+.kpi-title {
+  line-height: 1.25;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .icon-wrap {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  display: inline-flex;
   align-items: center;
-  justify-content: center;
   background: #e6fffb;
+  border-radius: 10px;
   color: var(--brand-700);
+  display: inline-flex;
+  height: 32px;
+  justify-content: center;
+  width: 32px;
 }
 
 .kpi-value {
-  margin-top: var(--space-3);
-  font-size: clamp(1.45rem, 2.6vw, 1.9rem);
-  line-height: 1.1;
-  font-weight: 800;
   color: var(--text-strong);
+  font-size: clamp(1.28rem, 1.7vw, 1.78rem);
+  font-weight: 800;
+  line-height: 1.1;
+  margin-top: var(--space-3);
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .kpi-subtitle {
-  margin-top: var(--space-2);
-  font-size: 0.82rem;
   color: var(--text-soft);
+  font-size: 0.82rem;
+  margin-top: var(--space-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

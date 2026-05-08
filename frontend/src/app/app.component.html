@@ -1,30 +1,30 @@
 <div class="app-shell">
-  <header class="topbar">
+  <aside class="sidebar">
     <div class="brand">
-      <div class="brand-icon" aria-hidden="true">
-        <mat-icon>hotel</mat-icon>
-      </div>
+      <img class="brand-logo" src="/revsight-logo.svg" alt="RevSight" />
       <div class="brand-copy">
-        <span class="brand-title">RMS Console</span>
-        <small>Revenue workflow: medir, decidir, ejecutar</small>
+        <strong>Command Center</strong>
+        <small>Revenue Management BI</small>
       </div>
     </div>
 
-    <nav class="top-nav" aria-label="Navegacion principal">
-      <a
-        *ngFor="let item of navItems"
-        mat-stroked-button
-        [routerLink]="item.path"
-        routerLinkActive="active-link"
-        [routerLinkActiveOptions]="{ exact: item.path === '/dashboard' }"
-      >
-        <mat-icon>{{ item.icon }}</mat-icon>
-        {{ item.label }}
-      </a>
+    <nav class="side-nav" aria-label="Navegacion principal">
+      <section class="nav-group" *ngFor="let group of navGroups">
+        <h2>{{ group.label }}</h2>
+        <a
+          *ngFor="let item of group.items"
+          [routerLink]="item.path"
+          routerLinkActive="active-link"
+          [routerLinkActiveOptions]="{ exact: item.path === '/dashboard' }"
+        >
+          <mat-icon>{{ item.icon }}</mat-icon>
+          <span>{{ item.label }}</span>
+        </a>
+      </section>
     </nav>
-  </header>
+  </aside>
 
-  <main class="content">
+  <main class="content" role="main">
     <router-outlet />
   </main>
 </div>

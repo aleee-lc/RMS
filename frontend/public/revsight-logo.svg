@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 140" role="img" aria-labelledby="title desc">
+  <title id="title">RevSight Logo</title>
+  <desc id="desc">Eye icon with growth arrow and RevSight wordmark.</desc>
+  <defs>
+    <linearGradient id="eyeStroke" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a3a72" />
+      <stop offset="100%" stop-color="#132f62" />
+    </linearGradient>
+    <linearGradient id="arrowStroke" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1e9f79" />
+      <stop offset="100%" stop-color="#26be87" />
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(10 8)">
+    <path
+      d="M20 62 C48 28 91 10 140 10 C188 10 232 28 260 62 C232 96 188 114 140 114 C91 114 48 96 20 62 Z"
+      fill="none"
+      stroke="url(#eyeStroke)"
+      stroke-width="11"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <circle cx="140" cy="62" r="24" fill="none" stroke="url(#eyeStroke)" stroke-width="10" />
+    <rect x="105" y="78" width="14" height="22" rx="3" fill="#1a3a72" />
+    <rect x="125" y="67" width="14" height="33" rx="3" fill="#1a3a72" />
+    <rect x="145" y="58" width="14" height="42" rx="3" fill="#1a3a72" />
+    <rect x="165" y="49" width="14" height="51" rx="3" fill="#1a3a72" />
+    <path
+      d="M82 86 L128 56 L167 56 L208 20"
+      fill="none"
+      stroke="url(#arrowStroke)"
+      stroke-width="10"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path d="M193 21 L224 14 L217 45 Z" fill="url(#arrowStroke)" />
+  </g>
+
+  <text
+    x="286"
+    y="88"
+    font-size="80"
+    font-family="Sora, Segoe UI, Arial, sans-serif"
+    font-weight="700"
+    letter-spacing="-1.4"
+  >
+    <tspan fill="#132f62">Rev</tspan><tspan fill="#20ac78">Sight</tspan>
+  </text>
+</svg>

@@ -1,15 +1,23 @@
-# RMS Frontend (Angular)
+# RevSight Frontend
 
-Interfaz Angular para el MVP de Revenue Management hotelero.
+Angular interface for the hotel Revenue Management MVP. The app consumes the NestJS backend and brings together data ingestion, revenue intelligence, recommendations, alerts, reports, and operational configuration.
 
-## Requisitos
+## Stack
+
+- Angular 21
+- Angular Material
+- Chart.js + ng2-charts
+- RxJS
+- TypeScript
+
+## Requirements
 
 - Node.js 20+
-- Backend NestJS corriendo en `http://localhost:3000`
+- Backend running at `http://localhost:3000`
 
-## Configuración
+## Configuration
 
-Edita [src/environments/environment.ts](./src/environments/environment.ts):
+Edit `src/environments/environment.ts`:
 
 ```ts
 export const environment = {
@@ -19,42 +27,87 @@ export const environment = {
 };
 ```
 
-## Ejecutar
+## Run
 
 ```bash
 npm install
 npm start
 ```
 
-App local: `http://localhost:4200`
+Local app: `http://localhost:4200`
 
-## Build producción
+## Build
 
 ```bash
 npm run build
 ```
 
-## Funcionalidades
+## Tests
 
-- **Upload**
-  - Subida XML (`/upload/xml`)
-  - Subida Excel (`/upload/excel`)
-  - Muestra respuesta resumida del backend
+```bash
+npm test
+```
 
-- **Dashboard**
-  - Filtro de fechas
-  - KPIs: ocupación promedio, ADR, revenue, alertas activas
-  - Gráfica de líneas (ocupación, ADR, revenue)
+## Navigation
 
-- **Recommendations**
-  - Tabla de recomendaciones con acción, precio sugerido y explicación
-  - Filtro de fechas y botón refresh
+The root route redirects to `/revenue-intelligence`.
 
-- **Alerts**
-  - Tabla de alertas
-  - Filtro por fechas y estado (activas/resueltas)
+- `/revenue-intelligence`: Revenue Command Center
+- `/recommendations`: Action Center
+- `/alerts`: Alerts Center
+- `/upload`: Upload Center
+- `/reports`: Reports & Exports
+- `/configuration`: Configuration
+- `/dashboard`: legacy redirect to `/revenue-intelligence`
 
-## Estructura
+## Features
+
+### Revenue Command Center
+
+- Executive summary for the selected date range.
+- Daily revenue calendar.
+- KPIs for revenue, occupancy, ADR, alerts, and opportunities.
+- Pickup, forecast, competitive-set, and recommendation context by date.
+- CSV/PDF exports from BI endpoints.
+
+### Action Center
+
+- Recommendation lookup by date range.
+- Manual recommendation generation.
+- `increase`, `decrease`, and `hold` actions.
+- Suggested price, occupancy, own price, and market-average visibility.
+
+### Alerts Center
+
+- Alert lookup by date range and status.
+- Alert resolution and reactivation.
+- Normalized severities for operational prioritization.
+
+### Upload Center
+
+- XML upload to `/upload/xml`.
+- Excel upload to `/upload/excel`.
+- Backend response summary.
+- Pre-upload validations.
+
+### Reports & Exports
+
+- Pickup reports.
+- Forecast variance.
+- Market position.
+- Recommendation compliance.
+- Revenue opportunity.
+- Executive summary.
+- CRS reconciliation.
+
+### Configuration
+
+- Base hotel management.
+- Competitor management.
+- Recommendation rule settings.
+- Rate-shopping and snapshot integration.
+
+## Structure
 
 ```txt
 src/app/
@@ -64,20 +117,31 @@ src/app/
     interceptors/
   shared/
     components/
-      kpi-card/
-      date-range-filter/
       action-badge/
+      date-range-filter/
+      kpi-card/
   features/
-    upload/
+    alerts/
+    configuration/
     dashboard/
     recommendations/
-    alerts/
+    reports/
+    revenue-intelligence/
+    upload/
   app.routes.ts
   app.component.ts
 ```
 
-## Supuestos
+## Main API Services
 
-- Se usa `hotelId = 1` por defecto.
-- El backend ya aplica lógica de recomendaciones/alertas.
-- Errores HTTP se muestran con snackbar global.
+- `ApiService`: base HTTP wrapper.
+- `BiService`: `/bi/revenue-calendar`, `/bi/executive-summary`, `/bi/export/csv`, `/bi/export/pdf`.
+- `ReportsService`: `/reports/*` endpoints.
+- Feature services for metrics, recommendations, alerts, hotels, competitors, and configuration.
+
+## Assumptions
+
+- `defaultHotelId` defines the active hotel by default.
+- The backend calculates and persists recommendations/alerts.
+- HTTP errors are surfaced through global app feedback.
+- Business configuration lives in the backend and is consumed by the configuration screen.

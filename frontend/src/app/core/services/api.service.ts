@@ -1,4 +1,4 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -6,7 +6,7 @@ import { environment } from '../../../environments/environment';
 export type QueryParamValue = string | number | boolean | null | undefined;
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class ApiService {
   private readonly http = inject(HttpClient);
@@ -14,25 +14,44 @@ export class ApiService {
 
   get<T>(path: string, queryParams?: Record<string, QueryParamValue>): Observable<T> {
     return this.http.get<T>(`${this.baseUrl}${path}`, {
-      params: this.toHttpParams(queryParams)
+      params: this.toHttpParams(queryParams),
     });
   }
 
-  post<T>(path: string, body: unknown, queryParams?: Record<string, QueryParamValue>): Observable<T> {
+  getBlob(
+    path: string,
+    queryParams?: Record<string, QueryParamValue>,
+  ): Observable<HttpResponse<Blob>> {
+    return this.http.get(`${this.baseUrl}${path}`, {
+      observe: 'response',
+      params: this.toHttpParams(queryParams),
+      responseType: 'blob',
+    });
+  }
+
+  post<T>(
+    path: string,
+    body: unknown,
+    queryParams?: Record<string, QueryParamValue>,
+  ): Observable<T> {
     return this.http.post<T>(`${this.baseUrl}${path}`, body, {
-      params: this.toHttpParams(queryParams)
+      params: this.toHttpParams(queryParams),
     });
   }
 
-  patch<T>(path: string, body: unknown, queryParams?: Record<string, QueryParamValue>): Observable<T> {
+  patch<T>(
+    path: string,
+    body: unknown,
+    queryParams?: Record<string, QueryParamValue>,
+  ): Observable<T> {
     return this.http.patch<T>(`${this.baseUrl}${path}`, body, {
-      params: this.toHttpParams(queryParams)
+      params: this.toHttpParams(queryParams),
     });
   }
 
   delete<T>(path: string, queryParams?: Record<string, QueryParamValue>): Observable<T> {
     return this.http.delete<T>(`${this.baseUrl}${path}`, {
-      params: this.toHttpParams(queryParams)
+      params: this.toHttpParams(queryParams),
     });
   }
 

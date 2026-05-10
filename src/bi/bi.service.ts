@@ -39,6 +39,7 @@ interface MarketAggregate {
 }
 
 type BiHotel = Pick<Hotel, 'id' | 'name' | 'totalRooms'>;
+type BiExportHotel = Pick<Hotel, 'id' | 'name' | 'totalRooms'> & { currency?: string };
 
 export interface BiSignal {
   type: string;
@@ -71,6 +72,12 @@ export interface RevenueCalendarItem {
   suggestedAction: BiRecommendationAction;
   recommendation: BiRecommendation;
   signals: BiSignal[];
+}
+
+export interface BiExportFile {
+  filename: string;
+  contentType: string;
+  buffer: Buffer;
 }
 
 @Injectable()
@@ -316,6 +323,92 @@ export class BiService {
       })),
       below_comp_set: rows.filter((row) => row.market.position === 'below').slice(0, 15),
       above_comp_set: rows.filter((row) => row.market.position === 'above').slice(0, 15)
+    };
+  }
+
+  async exportRevenueCalendarCsv(
+    hotel: BiExportHotel,
+    startDate: Date,
+    endDate: Date
+  ): Promise<BiExportFile> {
+    const rows = await this.getRevenueCalendar(hotel, startDate, endDate);
+    const range = this.exportRange(startDate, endDate);
+    const headers = [
+      'Fecha',
+      'Dia de semana',
+      'Dias a llegada',
+      'Ocupacion %',
+      'Pickup 7d',
+      'ADR',
+      'Revenue',
+      'Tarifa propia',
+      'Comp set promedio',
+      'Gap %',
+      'Ranking',
+      'Opportunity Score',
+      'Risk Score',
+      'Accion sugerida',
+      'Senales / alertas'
+    ];
+    const lines = [
+      headers.map((header) => this.csvCell(header)).join(','),
+      ...rows.map((row) =>
+        [
+          row.date,
+          this.dayOfWeek(row.date),
+          row.daysToArrival,
+          this.csvNumber(row.occupancy),
+          row.pickup.rooms7d,
+          this.csvNumber(row.adr),
+          this.csvNumber(row.revenue),
+          this.csvNumber(row.market.yourPrice),
+          this.csvNumber(row.market.marketAverage),
+          this.csvNumber(row.market.gapPct),
+          row.market.rank ? `${row.market.rank}/${row.market.rankTotal}` : '',
+          row.opportunityScore,
+          row.riskScore,
+          row.recommendation.label,
+          row.signals.map((signal) => signal.title).join(' | ')
+        ]
+          .map((value) => this.csvCell(value))
+          .join(',')
+      )
+    ];
+
+    return {
+      filename: `revenue-intelligence-${range.start}_a_${range.end}.csv`,
+      contentType: 'text/csv; charset=utf-8',
+      buffer: Buffer.from(`\uFEFF${lines.join('\r\n')}`, 'utf8')
+    };
+  }
+
+  async exportRevenueCalendarPdf(
+    hotel: BiExportHotel,
+    startDate: Date,
+    endDate: Date
+  ): Promise<BiExportFile> {
+    const [summary, rows] = await Promise.all([
+      this.getExecutiveSummary(hotel, startDate, endDate),
+      this.getRevenueCalendar(hotel, startDate, endDate)
+    ]);
+    const range = this.exportRange(startDate, endDate);
+    const generatedAt = new Date().toLocaleString('es-MX', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+      timeZone: 'America/Chihuahua'
+    });
+    const pdf = this.buildRevenueReportPdf({
+      hotel,
+      range,
+      generatedAt,
+      summary,
+      rows
+    });
+
+    return {
+      filename: `revenue-intelligence-${range.start}_a_${range.end}.pdf`,
+      contentType: 'application/pdf',
+      buffer: pdf
     };
   }
 
@@ -771,5 +864,188 @@ export class BiService {
       name: hotel.name,
       totalRooms: hotel.totalRooms
     };
+  }
+
+  private exportRange(startDate: Date, endDate: Date): { start: string; end: string } {
+    return {
+      start: toUtcDateOnly(startDate).toISOString().slice(0, 10),
+      end: toUtcDateOnly(endDate).toISOString().slice(0, 10)
+    };
+  }
+
+  private csvCell(value: unknown): string {
+    const text = value === null || value === undefined ? '' : String(value);
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+
+  private csvNumber(value: number | null): string {
+    return value === null ? '' : String(value);
+  }
+
+  private dayOfWeek(date: string): string {
+    return new Date(`${date}T00:00:00.000Z`)
+      .toLocaleDateString('es-MX', { weekday: 'short', timeZone: 'UTC' })
+      .replace('.', '')
+      .toUpperCase();
+  }
+
+  private buildRevenueReportPdf(input: {
+    hotel: BiExportHotel;
+    range: { start: string; end: string };
+    generatedAt: string;
+    summary: Awaited<ReturnType<BiService['getExecutiveSummary']>>;
+    rows: RevenueCalendarItem[];
+  }): Buffer {
+    const pages: string[] = [];
+    const width = 842;
+    const height = 595;
+    const margin = 32;
+    const lineHeight = 13;
+    let lines: Array<{ text: string; x: number; y: number; size: number; bold?: boolean }> = [];
+    let y = height - margin;
+
+    const addPage = () => {
+      pages.push(this.pdfPageContent(lines));
+      lines = [];
+      y = height - margin;
+    };
+    const addLine = (text: string, options?: { x?: number; size?: number; bold?: boolean }) => {
+      if (y < margin + 18) {
+        addPage();
+      }
+      lines.push({
+        text,
+        x: options?.x ?? margin,
+        y,
+        size: options?.size ?? 9,
+        bold: options?.bold
+      });
+      y -= lineHeight;
+    };
+    const addSpacer = (points = 8) => {
+      y -= points;
+    };
+
+    addLine('Revenue Intelligence Report', { size: 18, bold: true });
+    addLine(input.hotel.name, { size: 10 });
+    addLine(`Rango: ${input.range.start} a ${input.range.end}  |  Generado: ${input.generatedAt}`);
+    addSpacer();
+    addLine('KPIs ejecutivos', { size: 12, bold: true });
+    addLine(
+      `Ocupacion prom.: ${input.summary.kpis.avg_occupancy}%   ADR prom.: ${input.hotel.currency ?? 'MXN'} ${input.summary.kpis.avg_adr}   Revenue: ${input.hotel.currency ?? 'MXN'} ${input.summary.kpis.total_revenue}   Alertas activas: ${input.summary.kpis.active_alerts}`
+    );
+    addLine(
+      `Debajo comp set: ${input.summary.kpis.below_comp_set_dates}   Encima comp set: ${input.summary.kpis.above_comp_set_dates}   Baja demanda: ${input.summary.kpis.extremely_low_dates}`
+    );
+    addSpacer();
+    addLine('Top oportunidades', { size: 12, bold: true });
+    for (const row of input.summary.top_opportunities.slice(0, 5)) {
+      addLine(
+        `${row.date} | Opp ${row.opportunityScore} | Occ ${this.pdfValue(row.occupancy, '%')} | Gap ${this.pdfValue(row.market.gapPct, '%')} | ${row.recommendation.label}`
+      );
+    }
+    if (input.summary.top_opportunities.length === 0) addLine('Sin oportunidades para el rango.');
+    addSpacer();
+    addLine('Top riesgos', { size: 12, bold: true });
+    for (const row of input.summary.top_risks.slice(0, 5)) {
+      addLine(
+        `${row.date} | Risk ${row.riskScore} | Occ ${this.pdfValue(row.occupancy, '%')} | PU7D ${row.pickup.rooms7d} | ${row.recommendation.label}`
+      );
+    }
+    if (input.summary.top_risks.length === 0) addLine('Sin riesgos para el rango.');
+    addSpacer();
+    addLine('Revenue Calendar resumido', { size: 12, bold: true });
+    addLine(
+      'Fecha       DOW  DTA  Occ    PU  ADR      Revenue    Tarifa   Gap    Opp Risk Accion',
+      {
+        bold: true
+      }
+    );
+
+    for (const row of input.rows) {
+      addLine(
+        [
+          row.date.padEnd(10),
+          this.dayOfWeek(row.date).padEnd(4),
+          String(row.daysToArrival).padStart(3),
+          this.pdfValue(row.occupancy, '%').padStart(6),
+          String(row.pickup.rooms7d).padStart(3),
+          this.pdfValue(row.adr).padStart(8),
+          this.pdfValue(row.revenue).padStart(10),
+          this.pdfValue(row.market.yourPrice).padStart(8),
+          this.pdfValue(row.market.gapPct, '%').padStart(6),
+          String(row.opportunityScore).padStart(3),
+          String(row.riskScore).padStart(4),
+          row.recommendation.label
+        ].join(' ')
+      );
+    }
+    if (input.rows.length === 0) addLine('Sin datos para el rango seleccionado.');
+    pages.push(this.pdfPageContent(lines));
+
+    return this.assemblePdf(pages, width, height);
+  }
+
+  private pdfValue(value: number | null, suffix = ''): string {
+    return value === null ? '-' : `${value}${suffix}`;
+  }
+
+  private pdfPageContent(
+    lines: Array<{ text: string; x: number; y: number; size: number; bold?: boolean }>
+  ): string {
+    return lines
+      .map((line) => {
+        const font = line.bold ? 'F2' : 'F1';
+        return `BT /${font} ${line.size} Tf ${line.x} ${line.y} Td (${this.escapePdfText(
+          line.text
+        )}) Tj ET`;
+      })
+      .join('\n');
+  }
+
+  private escapePdfText(text: string): string {
+    return text
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^\x20-\x7E]/g, '')
+      .replace(/\\/g, '\\\\')
+      .replace(/\(/g, '\\(')
+      .replace(/\)/g, '\\)');
+  }
+
+  private assemblePdf(pageContents: string[], width: number, height: number): Buffer {
+    const objects: string[] = [
+      '<< /Type /Catalog /Pages 2 0 R >>',
+      `<< /Type /Pages /Kids ${pageContents
+        .map((_, index) => `${3 + index * 2} 0 R`)
+        .join(' ')} /Count ${pageContents.length} >>`
+    ];
+
+    pageContents.forEach((content, index) => {
+      const pageObjectId = 3 + index * 2;
+      const contentObjectId = pageObjectId + 1;
+      objects.push(
+        `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${width} ${height}] /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> /F2 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> >> >> /Contents ${contentObjectId} 0 R >>`
+      );
+      objects.push(
+        `<< /Length ${Buffer.byteLength(content, 'ascii')} >>\nstream\n${content}\nendstream`
+      );
+    });
+
+    let body = '%PDF-1.4\n';
+    const offsets = [0];
+    objects.forEach((object, index) => {
+      offsets.push(Buffer.byteLength(body, 'ascii'));
+      body += `${index + 1} 0 obj\n${object}\nendobj\n`;
+    });
+    const xrefOffset = Buffer.byteLength(body, 'ascii');
+    body += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+    body += offsets
+      .slice(1)
+      .map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`)
+      .join('');
+    body += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+
+    return Buffer.from(body, 'ascii');
   }
 }

@@ -1,0 +1,574 @@
+U N I V E R S I D A D  A U T Ó N O M A  D E  S I N A L O A
+C O L E G I O  D E  I N G E N I E R Í A  Y  T E C N O L O G Í A
+F A C U L T A D  D E  I N G E N I E R Í A  M O C H I S
+PROGRAMA DE LICENCIATURA EN INGENIERIA DE SOFTWARE
+
+Sistema de apoyo a la toma de decisiones para Revenue Management hotelero
+
+TESIS
+
+QUE COMO REQUISITO PARA OBTENER EL GRADO DE
+LICENCIADO EN INGENIERIA DE SOFTWARE 
+
+PRESENTA:
+Alejandro Lopez Cañedo
+
+DIRECTOR DE LA TESIS
+Mirsa Paolo Inzunza Martinez
+CO-DIRECTOR
+NOMBRE
+Los Mochis Sinaloa, México.                                                              Febrero de 2026
+
+Agradecimientos
+.
+
+Resumen
+.
+
+Objetivos
+Objetivo General
+Desarrollar un sistema inteligente de apoyo a la toma de decisiones en Revenue Management(RM) hotelero, capaz de analizar datos históricos de ocupación y tarifas, compararlos con un set competitivo y, con base en ello, generar alertas y sugerencias sobre el ajuste de precios.
+Objetivo Específicos
+Analizar el estado del arte de los sistemas de Revenue Management hotelero y de las herramientas de apoyo a la toma de decisiones basadas en datos históricos y benchmarking competitivo.
+Identificar y definir las variables clave del Revenue Management hotelero, tales como ocupación, tarifas, demanda y comportamiento del set competitivo.
+Diseñar y definir una arquitectura sólida para el prototipo del sistema, considerando la integración de datos históricos provenientes de un sistema de gestión hotelera, como Opera Cloud.
+Desarrollar un modelo de análisis de datos que permita detectar patrones en tarifas y ocupación para distintos periodos de tiempo.
+Integrar un módulo de alertas y recomendaciones, que con base en el procesamiento y análisis de la información sea capaz de sugerir ajustes en los precios, ya sea incremento o decremento.
+Evaluar el funcionamiento del sistema mediante pruebas de uso y validación de las recomendaciones generadas en escenarios hoteleros ficticios o reales.
+
+Índice General
+	 TOC \h \u \z \t "Heading 1,1,Heading 2,2,Heading 3,3,"Agradecimientos	iii
+	Resumen	iii
+	Objetivos	iv
+	Índice General	v
+	Índice de Tablas	vii
+	Índice de Figuras	viii
+		1	 PAGEREF _mr0da4z8wqkz \h Introducción	9
+		1.1.	 PAGEREF _s6gvlacqlr51 \h Antecedentes	9
+		1.2.	 PAGEREF _o0um019d97bt \h Planteamiento del Problema	9
+		1.3.	 PAGEREF _1emo6rx2czf8 \h Justificación	9
+		1.4.	 PAGEREF _c7eaf1qbbflf \h Metodología	9
+		1.5.	 PAGEREF _vsmv5a4rf2tw \h Organización del documento	9
+		2	 PAGEREF _lzjojxi3btyg \h Marco Teórico	10
+		3	 PAGEREF _ue3e64s137vw \h Metodología	11
+	3.1 Análisis	11
+	3.2 Diseño	11
+	3.2.1 Arquitectura	11
+	3.2.2 Casos de uso	11
+	3.2.3 Diagramas de secuencia	11
+	3.2.4 Diagrama entidad-relación	11
+	3.2.5 Algoritmos	11
+	3.2.6 Interfaces	11
+	3.3 Implementación	11
+		4	 PAGEREF _c78t4980og86 \h Experimentación, resultados y análisis	12
+		5	 PAGEREF _ejslwu2fr0q5 \h Conclusiones	12
+	Anexos	14
+	Anexo 1	14
+	Anexo 2	14
+
+Índice de Tablas
+	 TOC \h \u \z \t "Heading 1,1,Heading 2,2,Heading 3,3,Heading 4,4,Heading 5,5,Heading 6,6,"Tabla1 - Ejemplos de axiomas	47
+
+Índice de Figuras
+ TOC \h \u \z \t "Heading 1,1,Heading 2,2,Heading 3,3,Heading 4,4,Heading 5,5,Heading 6,6,"No table of figures entries found.
+		
+Introducción
+Antecedentes
+ El Revenue Management hotelero ha sido ampliamente estudiado como una estrategia clave para maximizar los ingresos mediante la correcta gestión de precios, disponibilidad y demanda. Diversos autores coinciden en que el análisis de datos históricos de ocupación y tarifas permite identificar patrones de comportamiento que apoyan la toma de decisiones estratégicas en establecimientos hoteleros.
+En este contexto, los sistemas de apoyo a la toma de decisiones han cobrado relevancia al integrar herramientas tecnológicas capaces de procesar grandes volúmenes de información, reduciendo la dependencia exclusiva del criterio humano. Estos sistemas han sido aplicados en distintos sectores, incluyendo la industria hotelera, con el objetivo de mejorar la precisión y oportunidad en la toma de decisiones.
+Asimismo, el benchmarking competitivo se ha consolidado como una práctica fundamental en Revenue Management, permitiendo a los hoteles comparar su desempeño tarifario con el de su set competitivo. Sin embargo, gran parte de las soluciones existentes se limitan a la visualización de datos, sin ofrecer alertas ni recomendaciones claras sobre el ajuste de precios en función del comportamiento histórico y del mercado.
+Ante estas limitaciones, surge la necesidad de desarrollar sistemas inteligentes que integren el análisis de datos históricos y competitivos, generando alertas y sugerencias que apoyen de manera efectiva la toma de decisiones en la gestión de precios hoteleros.
+Planteamiento del Problema
+En la industria hotelera, el Revenue Management (RM) se ha consolidado como una estrategia fundamental para la maximización de ingresos mediante la correcta gestión de precios, demanda y disponibilidad. Para ello, los grandes grupos hoteleros suelen implementar sistemas especializados conocidos como Revenue Management Systems (RMS), los cuales automatizan el análisis de datos históricos y de mercado para generar recomendaciones tarifarias.
+Sin embargo, no todos los establecimientos cuentan con los recursos financieros ni con la infraestructura tecnológica necesaria para implementar este tipo de soluciones. Muchos hoteles independientes o de tamaño mediano operan con presupuestos limitados que no permiten la adquisición de un RMS comercial, cuyos costos de licencia, implementación e integración pueden resultar elevados. Asimismo, existen casos en los que la arquitectura tecnológica del hotel, particularmente su sistema de reservas central (CRS) o sistema de gestión hotelera (PMS), no es compatible con las soluciones disponibles en el mercado.
+Ante esta situación, la gestión de precios suele depender principalmente del criterio del responsable de tarifas, quien debe analizar manualmente datos históricos y el comportamiento del set competitivo. Sin embargo, la selección y análisis del set competitivo no es un proceso trivial. De acuerdo con (Hesford et al., 2020), la elección del conjunto competitivo tiene consecuencias financieras significativas en el desempeño del hotel, ya que influye directamente en la percepción de posicionamiento y en las decisiones estratégicas de pricing. Una selección inadecuada o un análisis superficial puede generar decisiones tarifarias desalineadas con el mercado, afectando indicadores clave como la ocupación y el ingreso por habitación disponible.
+En este contexto, surge la necesidad de desarrollar una solución tecnológica accesible y adaptable que permita apoyar la toma de decisiones en Revenue Management sin requerir una inversión elevada ni una integración compleja con sistemas externos. Un sistema inteligente de apoyo a la decisión que analice datos históricos y del set competitivo, generando alertas y sugerencias estratégicas de ajuste de precios, podría representar una alternativa viable para hoteles que no cuentan con un RMS tradicional.
+
+Preguntas de investigación
+¿El sistema inteligente propuesto mejora la toma de decisiones de pricing en hoteles que no cuentan con un Revenue Management System (RMS) tradicional?
+
+Justificación
+
+Metodología
+
+Organización del documento
+
+Marco Teórico
+Este capítulo presenta la base teórica que sustenta el desarrollo del sistema de apoyo a la toma de decisiones para Revenue Management hotelero. Se abordan los conceptos fundamentales del Revenue Management, los indicadores clave de desempeño del sector, los sistemas de gestión hotelera, el benchmarking competitivo, los sistemas de apoyo a la toma de decisiones y los algoritmos de análisis de datos aplicables al contexto del problema.
+2.1 Temas relacionados
+En este apartado se presentan las definiciones y conceptos teóricos que conforman la base del presente trabajo de investigación.
+
+2.2 Trabajos relacionados
+2.1.1 Revenue Management
+El Revenue Management (RM), también conocido como Yield Management en sus primeras formulaciones, es una disciplina de gestión estratégica orientada a maximizar los ingresos mediante la optimización simultánea de precios, inventario y demanda. Según Kimes y Wirtz (2003), el RM puede definirse como la aplicación de sistemas de información y estrategias de precios para asignar la capacidad correcta al cliente correcto, al precio correcto y en el momento correcto [1]. Esta definición, ampliamente citada en la literatura académica, evidencia que el RM no se limita a la simple fijación de tarifas, sino que integra un enfoque multidimensional donde la información y la tecnología desempeñan un papel central.
+El origen del RM moderno se remonta a la industria de las aerolíneas en la década de 1970, cuando American Airlines desarrolló los primeros sistemas de tarifas diferenciadas para maximizar el ingreso por asiento disponible. Posteriormente, la industria hotelera adoptó y adaptó estos principios, reconociendo que sus servicios comparten condiciones estructurales similares: capacidad fija, inventario perecedero, demanda variable y costos marginales bajos para la prestación del servicio [2]. Estos elementos constituyen las condiciones de aplicabilidad del RM definidas por Kimes (1989) y revalidadas por investigaciones más recientes.
+En el contexto hotelero, el RM se ha consolidado como un pilar estratégico de la gestión operativa. De acuerdo con Hayes y Miller (2011), los cinco procesos fundamentales del RM son: el establecimiento de precios, la previsión de la demanda (forecasting), la gestión del inventario, la gestión de canales de distribución y la supervisión continua de los resultados [3]. Este marco operativo implica que una gestión efectiva del RM requiere no solo herramientas tecnológicas adecuadas, sino también un análisis riguroso de datos históricos y del entorno competitivo para generar decisiones tarifarias informadas y oportunas.
+Investigaciones recientes han señalado que el RM está evolucionando hacia un enfoque de "Revenue Management Total", que amplía el análisis más allá de las habitaciones para incluir todos los puntos de ingreso del hotel, tales como restaurantes, spa, eventos y servicios complementarios. Esta transición responde a la necesidad de considerar el valor total que cada huésped genera durante su estancia, y no únicamente la tarifa de la habitación [4]. Sin embargo, para hoteles independientes o de tamaño mediano, el primer paso crítico sigue siendo la consolidación de un sistema que les permita analizar eficientemente sus indicadores de habitaciones, antes de expandirse a otras fuentes de ingreso.
+
+2.1.2 Indicadores clave de desempeño en el sector hotelero (KPIs)
+Los indicadores clave de desempeño (Key Performance Indicators, KPIs) en la industria hotelera constituyen métricas cuantitativas que permiten evaluar el rendimiento operativo y financiero de un establecimiento. En el contexto del Revenue Management, tres indicadores son reconocidos universalmente como los más relevantes: la tasa de ocupación, la Tarifa Diaria Promedio (ADR, por sus siglas en inglés) y el Ingreso por Habitación Disponible (RevPAR). Comprender y monitorear estos indicadores de manera integrada es fundamental para la toma de decisiones estratégicas de precios.
+La tasa de ocupación mide el porcentaje de habitaciones disponibles que han sido vendidas en un periodo determinado. Su fórmula de cálculo es la siguiente:
+Ocupación (%) = (Habitaciones vendidas / Habitaciones disponibles) × 100
+Si bien una alta tasa de ocupación es deseable, un valor excesivamente elevado puede indicar que las tarifas del hotel están por debajo del nivel óptimo, lo que implica una pérdida de ingreso potencial. Por otro lado, una ocupación baja puede señalar problemas de posicionamiento tarifario frente al mercado [5].
+La Tarifa Diaria Promedio (Average Daily Rate, ADR) representa el ingreso promedio generado por cada habitación ocupada en un periodo dado. Se calcula mediante:
+ADR = Ingresos totales por habitaciones / Número de habitaciones vendidas
+El ADR ofrece una perspectiva sobre la efectividad de la estrategia de precios, pero su limitación radica en que no considera las habitaciones que permanecen sin vender. Por esta razón, debe analizarse en conjunto con la tasa de ocupación para obtener una imagen más completa del desempeño [5].
+El Ingreso por Habitación Disponible (Revenue Per Available Room, RevPAR) es considerado el indicador más integral para evaluar el desempeño de un hotel en términos de revenue management, ya que combina tanto el precio como la ocupación en una sola métrica. Puede calcularse de dos formas equivalentes:
+RevPAR = ADR × Tasa de ocupación
+RevPAR = Ingresos totales por habitaciones / Total de habitaciones disponibles
+A diferencia del ADR, el RevPAR incluye todas las habitaciones, tanto las vendidas como las que no generaron ingreso, proporcionando así una visión holística del rendimiento de la propiedad. Un RevPAR creciente indica que el hotel está mejorando su ADR, su ocupación o ambas variables simultáneamente [6]. Este indicador es ampliamente utilizado para comparar el desempeño a lo largo del tiempo y contra el set competitivo del mercado.
+Adicionalmente, existen métricas complementarias como el GOPPAR (Gross Operating Profit Per Available Room), que incorpora todos los flujos de ingreso y los costos operativos del hotel, ofreciendo una perspectiva de rentabilidad más integral. No obstante, para sistemas de apoyo a la toma de decisiones orientados a la gestión de precios de habitaciones, el RevPAR, el ADR y la ocupación representan el núcleo analítico más relevante y de mayor aplicación práctica en la industria [5].
+
+2.1.3 Sistemas de Gestión Hotelera (PMS)
+Un Sistema de Gestión Hotelera (Property Management System, PMS) es una plataforma de software diseñada para centralizar y automatizar las operaciones de un establecimiento hotelero. Históricamente, los PMS surgieron como herramientas para gestionar las reservas, el inventario de habitaciones y los procesos de entrada y salida de huéspedes (check-in y check-out). Con el tiempo, su alcance se ha expandido considerablemente para incluir módulos de gestión de tarifas, análisis de desempeño, reportes operativos, gestión de canales de distribución y administración de relaciones con el cliente (CRM) [7].
+Desde la perspectiva del Revenue Management, el PMS es la fuente primaria de datos históricos de ocupación, tarifas aplicadas, segmentos de mercado y patrones de reserva. La calidad y granularidad de la información almacenada en el PMS determinan directamente la precisión de los análisis de demanda y las recomendaciones tarifarias que puede generar un sistema inteligente de apoyo a la decisión. Por esta razón, la integración entre un sistema de RM y el PMS del hotel es considerada un requisito fundamental para cualquier solución tecnológica orientada a la optimización de ingresos [2].
+Oracle Hospitality OPERA Cloud es reconocido mundialmente como uno de los sistemas PMS más utilizados en la industria hotelera. De acuerdo con Oracle (2024), OPERA Cloud es una plataforma de gestión hotelera basada en la nube, habilitada para dispositivos móviles, que ofrece funcionalidades integrales para todas las áreas de la operación, desde la gestión de reservas hasta el análisis de desempeño en tiempo real [7]. Su arquitectura abierta, a través de la Oracle Hospitality Integration Platform (OHIP), permite integraciones con soluciones de terceros mediante APIs modernas, lo que facilita la extracción de datos históricos para su procesamiento en sistemas externos de análisis.
+Entre las características más relevantes de OPERA Cloud para el Revenue Management se destacan: la generación de más de 300 reportes predefinidos, dashboards personalizables por roles, soporte para múltiples propiedades y monedas, y la capacidad de exportar datos históricos de ocupación, tarifas y segmentos para su análisis [8]. Estas características hacen de OPERA Cloud una fuente de datos idónea para alimentar el sistema propuesto en la presente investigación.
+
+2.1.4 Benchmarking competitivo y set competitivo
+El benchmarking competitivo es una práctica estratégica que consiste en comparar el desempeño de un establecimiento hotelero con el de un grupo de propiedades similares que operan en el mismo mercado. En el ámbito del Revenue Management, este proceso se materializa a través del concepto de "set competitivo" (competitive set o comp set), definido como un conjunto cuidadosamente seleccionado de hoteles que compiten directamente con la propiedad de referencia por los mismos segmentos de demanda [9].
+La definición y análisis del set competitivo tiene implicaciones estratégicas de primer orden. Hesford et al. (2020) demostraron que la elección del conjunto competitivo tiene consecuencias financieras significativas en el desempeño del hotel, ya que influye directamente en la percepción de posicionamiento y en las decisiones estratégicas de pricing [10]. Una selección inadecuada puede derivar en una evaluación sesgada del posicionamiento tarifario del hotel respecto al mercado, generando decisiones de precios desalineadas con la realidad competitiva.
+Los criterios más utilizados para definir un set competitivo incluyen: la ubicación geográfica, la categoría o segmento del hotel (lujo, premium, midscale, economy), el tipo de demanda que atiende (corporativa, vacacional, grupos), el rango de tarifas aplicadas y las amenidades ofrecidas [9]. Schwartz et al. (2022) propusieron el concepto de "conjuntos competitivos inversos" como herramienta analítica complementaria, señalando que la subjetividad inherente en la selección del comp set puede afectar la confiabilidad de los índices de desempeño comparativo más utilizados en la industria [11].
+En la práctica del Revenue Management, el benchmarking competitivo se apoya principalmente en los índices de desempeño relativo reportados por herramientas especializadas como el STR STAR Report, que consolidan datos agregados de ocupación, ADR y RevPAR para el set competitivo seleccionado. A partir de estos índices, el revenue manager puede evaluar si su propiedad está capturando su cuota justa de mercado (Fair Market Share) o si existen oportunidades de mejora en su estrategia de precios. Este análisis comparativo es uno de los principales insumos para el módulo de recomendaciones del sistema propuesto en la presente investigación.
+
+2.1.5 Sistemas de Apoyo a la Toma de Decisiones (SAD)
+Los Sistemas de Apoyo a la Toma de Decisiones (SAD), conocidos en la literatura anglosajona como Decision Support Systems (DSS), son herramientas computacionales diseñadas para asistir a los tomadores de decisiones en la resolución de problemas complejos, semiestructurados o no estructurados que no pueden resolverse completamente mediante algoritmos estándar o métodos cuantitativos convencionales. De acuerdo con Power (2002), los DSS son sistemas de información computarizados que apoyan las actividades de toma de decisiones [12].
+Turban y Aronson (2001) definieron los DSS como sistemas computacionales basados en información (CBIS) interactivos, flexibles y adaptables, desarrollados específicamente para apoyar la solución de problemas gerenciales no estructurados, con el objetivo de mejorar la calidad de las decisiones [13]. Esta definición establece tres características fundamentales que distinguen a los SAD de otros sistemas de información: su naturaleza interactiva, que permite al usuario intervenir y ajustar el proceso analítico; su flexibilidad, que los hace adaptables a distintos contextos y tipos de problema; y su orientación a la mejora del proceso decisional, no a su sustitución completa.
+Power (2012) propone una taxonomía de cinco tipos de DSS: orientados a comunicaciones, orientados a datos, orientados a documentos, orientados al conocimiento y orientados a modelos [12]. Para el presente trabajo, el sistema propuesto se enmarca principalmente en la categoría de SAD orientados a datos (data-driven DSS), ya que su funcionalidad central consiste en proveer acceso a grandes volúmenes de datos históricos de ocupación y tarifas, combinado con herramientas analíticas para detectar patrones y generar recomendaciones. Adicionalmente, incorpora elementos de un SAD orientado al conocimiento, al integrar reglas de recomendación basadas en el análisis del comportamiento del mercado competitivo.
+En el sector hotelero, la aplicación de SAD ha cobrado especial relevancia ante el incremento en el volumen de datos disponibles y la necesidad de procesar información en tiempo real para optimizar decisiones de precios. La literatura ha documentado que los SAD orientados al Revenue Management permiten reducir la dependencia del criterio subjetivo del revenue manager, disminuir los errores de estimación en el forecasting de demanda y mejorar la consistencia en la aplicación de estrategias tarifarias [2]. El sistema propuesto en esta investigación responde precisamente a esta necesidad, integrando análisis de datos históricos del PMS con la información del set competitivo para generar alertas y sugerencias de ajuste de precios.
+
+2.1.6 Análisis de datos y detección de patrones en Revenue Management
+El análisis de datos históricos constituye el núcleo metodológico del Revenue Management moderno. La capacidad de identificar patrones en el comportamiento de la ocupación y las tarifas a lo largo del tiempo permite a los establecimientos hoteleros anticipar variaciones en la demanda y ajustar proactivamente su estrategia de precios. En este contexto, el análisis de datos se apoya en técnicas estadísticas y de inteligencia computacional para transformar datos brutos del PMS en información accionable [14].
+El forecasting o previsión de la demanda es uno de los procesos analíticos más críticos del RM. Weatherford y Kimes (2003) compararon distintos métodos de previsión aplicados al contexto hotelero, concluyendo que los enfoques basados en datos históricos desagregados por segmento y periodo temporal tienden a superar en precisión a los métodos agregados [15]. En la práctica, los métodos más utilizados incluyen el análisis de series de tiempo, las medias móviles, los modelos de regresión y, en aplicaciones más avanzadas, los algoritmos de aprendizaje automático (machine learning).
+Para el sistema propuesto, el análisis de patrones se enfocará en tres dimensiones temporales: la estacionalidad (variaciones sistemáticas a lo largo del año), las tendencias (comportamiento progresivo de indicadores como el ADR o el RevPAR a lo largo de periodos extendidos) y los efectos de eventos especiales (ferias, eventos corporativos, festividades) que generan picos atípicos de demanda. La identificación de estos patrones permite al sistema generar alertas cuando el comportamiento actual se desvía significativamente del histórico, y formular sugerencias de ajuste de precios fundamentadas en evidencia cuantitativa.
+La estrategia omnidatos, descrita en la literatura reciente como la integración y análisis de una amplia gama de datos relevantes, incluyendo estimaciones de demanda futura, datos históricos, reservas, inventario y comportamiento competitivo, representa el enfoque más completo para el Revenue Management contemporáneo [4]. El sistema propuesto se alinea con esta estrategia al integrar múltiples fuentes de datos en un único módulo de análisis que alimenta el componente de recomendaciones.
+
+2.1.7 Sistemas de alertas y recomendaciones en Revenue Management
+Un componente esencial en los sistemas inteligentes de apoyo a la toma de decisiones para Revenue Management es el módulo de alertas y recomendaciones. Este módulo tiene la función de procesar los resultados del análisis de datos y del benchmarking competitivo para traducirlos en señales concretas que orienten al responsable de tarifas en su proceso decisional. A diferencia de un sistema de visualización pasiva, un módulo de alertas activo permite que el sistema sea proactivo en la identificación de oportunidades o riesgos tarifarios.
+Las alertas en el contexto del RM pueden clasificarse en dos categorías principales: alertas de desempeño interno, cuando los indicadores del hotel se desvían de sus propias tendencias históricas o de los objetivos presupuestados; y alertas de posicionamiento competitivo, cuando la brecha entre las tarifas del hotel y las de su set competitivo supera umbrales definidos que podrían estar afectando negativamente la captura de demanda o la maximización del ingreso [9].
+Las recomendaciones generadas por el sistema se basan en reglas lógicas derivadas del análisis de las desviaciones detectadas. De manera general, se pueden establecer dos tipos de sugerencias: incremento de tarifa, cuando la demanda proyectada supera la media histórica y/o el hotel presenta tarifas significativamente por debajo del set competitivo en un periodo de alta demanda; y decremento o ajuste de tarifa, cuando la ocupación acumulada está por debajo del ritmo histórico y/o las tarifas del hotel se encuentran por encima del mercado en un periodo de demanda débil [2]. Esta lógica de recomendación, sustentada en el análisis comparativo de datos históricos y competitivos, es el mecanismo central que diferencia al sistema propuesto de las herramientas convencionales de visualización de datos disponibles para hoteles de tamaño mediano.
+
+Metodología
+3.1 Análisis
+3.2 Diseño
+	3.2.1 Arquitectura
+	3.2.2 Casos de uso
+	3.2.3 Diagramas de secuencia
+	3.2.4 Diagrama entidad-relación
+	3.2.5 Algoritmos
+	3.2.6 Interfaces
+3.3 Implementación 
+3.4 Descripción del sistema
+
+Experimentación, resultados y análisis 
+4.1 Técnica de muestreo
+4.2 Participantes
+4.3 Muestra
+4.4 Metodología (procedimiento)
+4.5 Resultados
+4.6 Discusión
+Conclusiones
+
+Bibliografía
+Hesford, J., Hoffmann, K., Mangin, N., & Turner, M. J. (2020). Financial consequences of competitive set choice. International Journal of Hospitality Management, 86, 102453. https://doi.org/10.1016/j.ijhm.2020.102453
+ 
+
+Anexos
+Casos de uso
+ANEXO – CASOS DE USO DETALLADOS
+Sistema de apoyo a la toma de decisiones para Revenue Management hotelero
+Alejandro Lopez Cañedo | Facultad de Ingeniería Mochis, UAS | Febrero 2026
+El presente anexo documenta los casos de uso identificados para el sistema SAD-RM. Se identificaron tres actores principales: el Revenue Manager (usuario principal), el Administrador del sistema y las fuentes externas (Opera Cloud y Expedia). Los casos de uso cubren los módulos de ingesta de datos, análisis de métricas, generación de recomendaciones, gestión de alertas y generación de reportes.
+A. Módulo de Ingesta de Datos
+CU-01: Cargar archivo XML de reservas (Reservation Entered On)
+ID
+CU-01
+Nombre
+Cargar archivo XML de reservas (Reservation Entered On)
+Actor principal
+Revenue Manager
+Actor secundario
+Sistema Opera Cloud (fuente externa)
+Precondición
+El usuario posee un archivo XML exportado de Opera Cloud de tipo 'Reservation Entered On' con nodos G_ROOM. El sistema está en funcionamiento y el hotel está registrado.
+Postcondición
+Las reservas se almacenan en la tabla ReservationRaw (sin duplicados). Las métricas diarias del rango de fechas afectado son recomputadas automáticamente. El dashboard refleja los nuevos datos.
+Flujo principal
+1. El Revenue Manager accede a la pantalla 'Upload'. 2. Hace clic en la tarjeta 'Cargar XML de Reservas'. 3. Selecciona el archivo XML desde su sistema de archivos. 4. El frontend envía el archivo via POST /upload/xml. 5. El IngestionController detecta automáticamente el formato G_ROOM. 6. El IngestionService extrae cada nodo de reserva y lo transforma al modelo interno. 7. Los registros se insertan en ReservationRaw con skipDuplicates (idempotencia). 8. El MetricsService recomputa las métricas diarias del rango afectado. 9. El sistema muestra un resumen: reservas insertadas, días recomputados.
+Flujos alternativos
+4a. El archivo no tiene el formato esperado: el sistema intenta otros parsers disponibles. 4b. Ningún parser aplica: retorna error HTTP 400 con mensaje descriptivo. 4c. El archivo ya fue cargado previamente: se insertan solo registros nuevos (skipDuplicates). 4d. Error de red al subir: el frontend muestra mensaje de reintento.
+Excepciones
+Si el XML está malformado o vacío, el sistema retorna error 400 y no modifica la base de datos.
+Restricciones
+Solo acepta archivos con extensión .xml. El tamaño máximo recomendado es 50 MB. La operación es idempotente: cargar el mismo archivo no genera duplicados.
+CU-02: Cargar archivo XML de histórico y pronóstico (History and Forecast)
+ID
+CU-02
+Nombre
+Cargar archivo XML de histórico y pronóstico (History and Forecast)
+Actor principal
+Revenue Manager
+Actor secundario
+Sistema Opera Cloud (fuente externa)
+Precondición
+El usuario posee un archivo XML de Opera Cloud de tipo 'History and Forecast' con nodos A_STAT y/o B_FORE.
+Postcondición
+Los datos históricos y de pronóstico quedan almacenados. Las métricas diarias se actualizan con los valores de ocupación y ADR del periodo cubierto.
+Flujo principal
+1. El Revenue Manager accede a la pantalla 'Upload'. 2. Hace clic en la tarjeta 'Cargar Histórico / Pronóstico'. 3. Selecciona el archivo XML. 4. El frontend envía el archivo via POST /upload/xml. 5. El sistema detecta los nodos A_STAT (histórico) y B_FORE (pronóstico). 6. Parsea ocupación, ADR y revenue por fecha. 7. Actualiza o crea registros en DailyMetrics para cada fecha. 8. Muestra resumen: fechas históricas y de pronóstico cargadas.
+Flujos alternativos
+5a. Solo hay nodos A_STAT (sin pronóstico): el sistema procesa únicamente el histórico. 5b. Solo hay nodos B_FORE: se cargan solo datos de pronóstico. 7a. Ya existen métricas para esas fechas: se sobreescriben con los valores del archivo (upsert).
+Excepciones
+Si el archivo no contiene nodos A_STAT ni B_FORE, retorna error 400.
+Restricciones
+Solo acepta archivos .xml. Idempotente: recargar el mismo archivo actualiza los valores existentes sin crear duplicados.
+CU-03: Cargar archivo XML de distribución de tarifas CRS (RoomRateDistribution)
+ID
+CU-03
+Nombre
+Cargar archivo XML de distribución de tarifas CRS (RoomRateDistribution)
+Actor principal
+Revenue Manager
+Actor secundario
+Sistema Opera Cloud (fuente externa)
+Precondición
+El usuario posee un archivo XML de Opera Cloud de tipo 'CRS RoomRateDistribution'.
+Postcondición
+Los snapshots de distribución de tarifas CRS quedan almacenados en CrsRoomRateDistributionSnapshot para su uso en el reporte de reconciliación CRS vs. RMS.
+Flujo principal
+1. El Revenue Manager accede a la pantalla 'Upload'. 2. Hace clic en la tarjeta 'Cargar CRS RoomRateDistribution'. 3. Selecciona el archivo XML. 4. El frontend envía el archivo via POST /upload/xml. 5. El sistema detecta el formato CRS RoomRateDistribution. 6. Extrae los totales de tarifas por tipo de habitación y canal de distribución. 7. Almacena el snapshot con fecha de carga en CrsRoomRateDistributionSnapshot. 8. Muestra confirmación de registros almacenados.
+Flujos alternativos
+5a. El formato no corresponde a CRS: el sistema retorna error 400. 7a. Ya existe un snapshot del mismo día: se actualiza en lugar de duplicar.
+Excepciones
+Si el XML está vacío o tiene estructura inválida, el sistema retorna error 400.
+Restricciones
+Solo acepta archivos .xml. El snapshot queda vinculado al hotel activo.
+CU-04: Cargar grilla de precios de competencia desde Expedia (Excel)
+ID
+CU-04
+Nombre
+Cargar grilla de precios de competencia desde Expedia (Excel)
+Actor principal
+Revenue Manager
+Actor secundario
+Expedia / Portal de competencia (fuente externa)
+Precondición
+El usuario posee un archivo Excel (.xlsx) descargado de Expedia con la grilla de precios diarios del hotel y sus competidores. La estructura esperada: fila 9 = encabezados de mes, fila 11 = días del mes, fila 12+ = precios por hotel.
+Postcondición
+Los precios del hotel propio se actualizan en MarketRates (campo yourPrice). Los precios de cada competidor se almacenan en CompetitorMarketRates. El promedio de mercado (marketAverage) es calculado y guardado en MarketRates.
+Flujo principal
+1. El Revenue Manager accede a la pantalla 'Upload'. 2. Hace clic en la tarjeta 'Cargar Grilla Expedia (Excel)'. 3. Selecciona el archivo .xlsx. 4. El frontend envía el archivo via POST /upload/excel. 5. El parser ExcelJS localiza la fila 9 (meses) y fila 11 (días) para construir el mapa de fechas. 6. Itera desde la fila 12: la primera fila de precios es el hotel propio; las siguientes son competidores. 7. Crea o actualiza registros de Competitor si son nuevos. 8. Almacena los precios en CompetitorMarketRates y actualiza yourPrice en MarketRates. 9. Calcula el marketAverage como promedio de precios de competidores y lo guarda en MarketRates. 10. Muestra resumen: fechas cargadas, competidores detectados.
+Flujos alternativos
+5a. El archivo no sigue la estructura esperada de Expedia: error 400. 7a. El competidor ya existe: se reutiliza el registro existente. 8a. Una celda de precio está vacía: se omite ese día para ese competidor.
+Excepciones
+Si el archivo tiene formato incorrecto o no es un .xlsx válido, el sistema retorna error 400.
+Restricciones
+Solo acepta archivos .xlsx. La primera fila de precios (fila 12) siempre corresponde al hotel propio.
+B. Módulo de Métricas y KPIs
+CU-05: Consultar métricas diarias (ocupación, ADR, revenue)
+ID
+CU-05
+Nombre
+Consultar métricas diarias (ocupación, ADR, revenue)
+Actor principal
+Revenue Manager
+Precondición
+El sistema contiene datos de DailyMetrics para al menos alguna fecha dentro del rango solicitado.
+Postcondición
+El Revenue Manager visualiza los KPIs y la gráfica de tendencia para el periodo seleccionado.
+Flujo principal
+1. El Revenue Manager accede a la pantalla 'Dashboard'. 2. Selecciona un rango de fechas mediante los campos de inicio y fin. 3. El frontend envía GET /metrics?startDate=...&endDate=... 4. El MetricsService consulta DailyMetrics para el rango especificado. 5. Calcula los KPIs agregados: ocupación promedio, ADR promedio, revenue total, RevPAR. 6. Retorna la serie temporal de valores diarios. 7. El frontend renderiza los KPIs en tarjetas y la evolución en una gráfica de líneas (Chart.js). 8. Se muestra el número de alertas activas como indicador adicional en el dashboard.
+Flujos alternativos
+4a. No hay datos para el rango solicitado: el sistema retorna lista vacía y el dashboard muestra ceros. 2a. El usuario no selecciona fechas: se usa el rango predeterminado (últimos 30 días).
+Excepciones
+Si la fecha inicio es posterior a la fecha fin, el sistema retorna error de validación.
+Restricciones
+El rango máximo recomendado es de 365 días para mantener tiempo de respuesta < 2 segundos.
+C. Módulo de Recomendaciones
+CU-06: Consultar recomendaciones de precios por rango de fechas
+ID
+CU-06
+Nombre
+Consultar recomendaciones de precios por rango de fechas
+Actor principal
+Revenue Manager
+Precondición
+Existen métricas y/o tarifas de mercado en el rango solicitado. El hotel tiene configurado un precio base.
+Postcondición
+Las recomendaciones son generadas y persistidas en la tabla Recommendations. Las alertas correspondientes a acciones no HOLD son sincronizadas en la tabla Alerts.
+Flujo principal
+1. El Revenue Manager navega a la pantalla 'Recommendations'. 2. Selecciona el rango de fechas de interés. 3. El frontend envía GET /recommendations?startDate=...&endDate=... 4. El RecommendationService consulta en paralelo DailyMetrics y MarketRates para el rango. 5. Para cada fecha: calcula priceDiffPct = (yourPrice - marketAverage) / marketAverage * 100. 6. Aplica reglas: INCREASE si ocupación > 70% y priceDiffPct < -10%; DECREASE si ocupación < 30% y priceDiffPct > +10%; HOLD en otros casos. 7. Calcula el precio sugerido aplicando el factor de demanda y factor de mercado (±20% máximo). 8. Guarda o actualiza cada recomendación (upsert por hotel + fecha). 9. Sincroniza alertas: crea alertas activas para recomendaciones INCREASE o DECREASE. 10. Retorna la lista de recomendaciones con acción, precio sugerido, precio actual, promedio de mercado y explicación. 11. El frontend muestra la tabla con badges de color (verde=INCREASE, rojo=DECREASE, gris=HOLD).
+Flujos alternativos
+4a. No hay métricas para una fecha específica: se genera recomendación HOLD con precio igual al precio base. 4b. No hay tarifas de mercado para una fecha: se evalúa solo con datos de ocupación. 9a. Ya existe una alerta para esa recomendación: se actualiza en lugar de duplicar.
+Excepciones
+Si no hay ningún dato disponible para el rango, el sistema retorna lista vacía sin errores.
+Restricciones
+El algoritmo aplica umbrales configurables. El ajuste de precio está limitado a ±20% respecto al precio base.
+D. Módulo de Alertas
+CU-07: Consultar y gestionar alertas activas
+ID
+CU-07
+Nombre
+Consultar y gestionar alertas activas
+Actor principal
+Revenue Manager
+Precondición
+El sistema contiene alertas generadas a partir de recomendaciones no HOLD.
+Postcondición
+El Revenue Manager visualiza las alertas activas y puede marcarlas como resueltas. Las alertas resueltas quedan registradas para auditoría.
+Flujo principal
+1. El Revenue Manager navega a la pantalla 'Alerts'. 2. Aplica filtros opcionales: estado (activa / resuelta) y rango de fechas. 3. El frontend envía GET /alerts?resolved=false&startDate=...&endDate=... 4. El AlertsService consulta la tabla Alerts con los filtros indicados. 5. Retorna la lista de alertas con severidad (low/medium/high), fecha, tipo de acción y mensaje. 6. El frontend muestra la tabla con código de colores por severidad. 7. El Revenue Manager puede hacer clic en 'Resolver' para marcar una alerta como resuelta. 8. El sistema actualiza el campo resolved=true y registra la fecha de resolución.
+Flujos alternativos
+2a. Sin filtros aplicados: se muestran todas las alertas activas por defecto. 7a. El usuario cambia el filtro a 'Resueltas': se muestran alertas históricas. 8a. La alerta ya estaba resuelta: el sistema confirma sin error.
+Excepciones
+Si el sistema no puede actualizar el estado de una alerta, muestra mensaje de error sin cambiar el estado.
+Restricciones
+Las alertas de severidad 'high' corresponden a recomendaciones INCREASE con alta demanda o DECREASE con baja crítica. No se pueden eliminar alertas, solo resolverlas.
+E. Módulo de Reportes
+CU-08: Generar reporte de pickup de reservas
+ID
+CU-08
+Nombre
+Generar reporte de pickup de reservas
+Actor principal
+Revenue Manager
+Precondición
+El sistema contiene reservas en ReservationRaw con fecha de entrada en el rango solicitado.
+Postcondición
+El Revenue Manager visualiza el reporte de pickup que muestra cuántas reservas adicionales se han generado para cada fecha de llegada en distintos momentos antes del check-in.
+Flujo principal
+1. El Revenue Manager accede a la sección de reportes. 2. Selecciona el reporte 'Pickup de Reservas' y el rango de fechas de llegada. 3. El frontend envía GET /reports/pickup?startDate=...&endDate=... 4. El ReportsService agrupa las reservas por fecha de llegada y fecha de creación. 5. Calcula el incremento de reservas en ventanas de tiempo: 90, 60, 30, 14 y 7 días antes. 6. Retorna la tabla de pickup con la distribución de reservas por anticipación. 7. El frontend muestra la tabla con la dinámica de acumulación de reservas.
+Flujos alternativos
+4a. No hay reservas para alguna fecha del rango: esa fecha aparece con valores en cero.
+Excepciones
+Si el rango de fechas está vacío, retorna error de validación.
+Restricciones
+El reporte requiere datos de creación de reserva (fecha entered on) en ReservationRaw.
+CU-09: Generar reporte de varianza de pronóstico (Forecast Variance)
+ID
+CU-09
+Nombre
+Generar reporte de varianza de pronóstico (Forecast Variance)
+Actor principal
+Revenue Manager
+Precondición
+El sistema contiene datos de pronóstico (B_FORE) y datos reales (A_STAT) para el rango solicitado.
+Postcondición
+El Revenue Manager visualiza la diferencia entre los valores pronosticados y los valores reales de ocupación, ADR y revenue para identificar desviaciones en el forecast.
+Flujo principal
+1. El Revenue Manager selecciona el reporte 'Varianza de Pronóstico' y el rango de fechas. 2. El frontend envía GET /reports/forecast-variance?startDate=...&endDate=... 3. El ReportsService consulta DailyMetrics y separa los valores reales de los pronosticados. 4. Calcula para cada fecha: varianza absoluta y porcentual de ocupación, ADR y revenue. 5. Identifica fechas con varianza superior al umbral de ±15% como alertas de desviación. 6. Retorna la tabla con real, pronóstico y varianza por fecha. 7. El frontend resalta en rojo las filas con varianza significativa.
+Flujos alternativos
+3a. Solo hay datos reales sin pronóstico: se muestra solo la columna real con pronóstico en N/A. 3b. Solo hay pronóstico sin datos reales: se muestra la columna de pronóstico con real en N/A.
+Excepciones
+Si no hay ningún tipo de datos para el rango, el sistema retorna lista vacía.
+Restricciones
+El umbral de alerta de varianza es configurable. Por defecto es ±15%.
+CU-10: Generar reporte de posición de mercado
+ID
+CU-10
+Nombre
+Generar reporte de posición de mercado
+Actor principal
+Revenue Manager
+Precondición
+El sistema contiene datos de MarketRates y CompetitorMarketRates para el rango solicitado.
+Postcondición
+El Revenue Manager visualiza la posición tarifaria del hotel respecto a su set competitivo, incluyendo el precio propio, el promedio de mercado, y el precio de cada competidor por fecha.
+Flujo principal
+1. El Revenue Manager selecciona el reporte 'Posición de Mercado' y el rango de fechas. 2. El frontend envía GET /reports/market-position?startDate=...&endDate=... 3. El ReportsService consulta MarketRates y CompetitorMarketRates para el rango. 4. Calcula por fecha: diferencia absoluta y porcentual entre yourPrice y marketAverage. 5. Identifica días en los que el hotel está más de un 10% por encima o por debajo del mercado. 6. Retorna la tabla con precio propio, promedio de mercado, precio de cada competidor y posición relativa. 7. El frontend muestra la tabla con indicadores visuales de posición (↑↓=).
+Flujos alternativos
+3a. No hay datos de competencia para algunas fechas: esas fechas muestran marketAverage como N/A. 3b. Solo hay datos propios sin competencia: se muestra yourPrice sin comparación.
+Excepciones
+Si no hay datos de mercado para el rango completo, el sistema retorna los datos disponibles con advertencia.
+Restricciones
+Solo muestra competidores que tienen al menos un precio registrado en el rango solicitado.
+CU-11: Generar resumen ejecutivo
+ID
+CU-11
+Nombre
+Generar resumen ejecutivo
+Actor principal
+Revenue Manager
+Precondición
+El sistema contiene datos de métricas, recomendaciones, alertas y posición de mercado para el periodo solicitado.
+Postcondición
+El Revenue Manager recibe un resumen consolidado con los KPIs clave, el estado de las recomendaciones y las alertas más relevantes del periodo.
+Flujo principal
+1. El Revenue Manager selecciona el reporte 'Resumen Ejecutivo' y el periodo. 2. El frontend envía GET /reports/executive-summary?startDate=...&endDate=... 3. El ReportsService ejecuta en paralelo las consultas de métricas, recomendaciones y alertas. 4. Consolida: ocupación promedio, ADR promedio, RevPAR, revenue total, distribución de recomendaciones (INCREASE/DECREASE/HOLD) y número de alertas por severidad. 5. Calcula el ingreso potencial no capturado (suma de días DECREASE con revenue subóptimo). 6. Retorna el objeto de resumen ejecutivo. 7. El frontend muestra un panel con KPIs, gráfica de distribución de recomendaciones y listado de alertas críticas.
+Flujos alternativos
+3a. No hay recomendaciones generadas: la distribución aparece en cero. 3b. No hay alertas activas: se indica 'Sin alertas activas en el periodo'.
+Excepciones
+Si no hay datos de ningún tipo para el periodo, el sistema retorna todos los indicadores en cero con aviso.
+Restricciones
+El resumen ejecutivo consolida todas las fuentes disponibles; no es necesario que estén todas presentes.
+CU-12: Generar reporte de reconciliación CRS vs. RMS
+ID
+CU-12
+Nombre
+Generar reporte de reconciliación CRS vs. RMS
+Actor principal
+Revenue Manager
+Precondición
+El sistema contiene snapshots de CrsRoomRateDistributionSnapshot y datos de DailyMetrics para el periodo solicitado.
+Postcondición
+El Revenue Manager visualiza las diferencias entre los totales reportados por el CRS (Opera Cloud) y los calculados por el RMS (sistema local), identificando posibles discrepancias de datos.
+Flujo principal
+1. El Revenue Manager selecciona el reporte 'Reconciliación CRS' y el periodo. 2. El frontend envía GET /reports/crs-reconciliation?startDate=...&endDate=... 3. El ReportsService consulta CrsRoomRateDistributionSnapshot y DailyMetrics para el rango. 4. Compara los valores de revenue y habitaciones vendidas entre ambas fuentes. 5. Calcula la diferencia absoluta y porcentual por fecha. 6. Retorna la tabla de reconciliación indicando concordancia o discrepancia por día. 7. El frontend resalta en color las fechas con discrepancia superior al 5%.
+Flujos alternativos
+3a. No hay snapshots CRS para el periodo: se indica que no hay datos CRS para comparar. 3b. Solo hay snapshots CRS sin métricas RMS: se muestra solo la columna CRS.
+Excepciones
+Si los datos de ambas fuentes son inconsistentes en formato, el sistema retorna error con detalle.
+Restricciones
+El umbral de discrepancia aceptable es 5%. Valores fuera de ese rango se resaltan como revisión obligatoria.
+CU-13: Generar reporte de cumplimiento de recomendaciones
+ID
+CU-13
+Nombre
+Generar reporte de cumplimiento de recomendaciones
+Actor principal
+Revenue Manager
+Precondición
+El sistema contiene recomendaciones generadas y el Revenue Manager ha registrado manualmente las tarifas aplicadas (o bien el sistema las compara con los datos históricos de ADR resultantes).
+Postcondición
+El Revenue Manager visualiza en qué porcentaje las recomendaciones del sistema fueron seguidas, y cuál fue el impacto en el ADR real de los días donde se siguieron vs. donde no.
+Flujo principal
+1. El Revenue Manager selecciona el reporte 'Cumplimiento de Recomendaciones' y el periodo. 2. El frontend envía GET /reports/recommendation-compliance?startDate=...&endDate=... 3. El ReportsService consulta Recommendations y DailyMetrics para el mismo rango. 4. Para cada fecha con recomendación INCREASE: verifica si el ADR real del día posterior fue mayor al precio base. 5. Para cada fecha con recomendación DECREASE: verifica si el ADR real fue menor. 6. Calcula el porcentaje de recomendaciones seguidas y no seguidas. 7. Compara el RevPAR promedio en días con cumplimiento vs. sin cumplimiento. 8. Retorna el reporte con métricas de cumplimiento y análisis de impacto.
+Flujos alternativos
+4a. No hay ADR real para una fecha (sin reservas): se omite del análisis de cumplimiento. 3a. No hay recomendaciones para el periodo: retorna reporte vacío con aviso.
+Excepciones
+El análisis es aproximado: no verifica directamente la tarifa publicada, sino el ADR resultante.
+Restricciones
+El cumplimiento se infiere comparando el ADR real con el precio sugerido; no requiere entrada manual del usuario.
+CU-14: Generar reporte de oportunidad de ingresos (Revenue Opportunity)
+ID
+CU-14
+Nombre
+Generar reporte de oportunidad de ingresos (Revenue Opportunity)
+Actor principal
+Revenue Manager
+Precondición
+El sistema contiene recomendaciones INCREASE o DECREASE con precio sugerido para el periodo.
+Postcondición
+El Revenue Manager visualiza el ingreso potencial no capturado: diferencia entre el ingreso real y el ingreso que se habría obtenido siguiendo el precio sugerido por el sistema.
+Flujo principal
+1. El Revenue Manager selecciona el reporte 'Oportunidad de Ingresos' y el periodo. 2. El frontend envía GET /reports/revenue-opportunity?startDate=...&endDate=... 3. El ReportsService consulta Recommendations y DailyMetrics para el rango. 4. Para días INCREASE: calcula (suggestedPrice - yourPrice) × habitaciones vendidas. 5. Para días DECREASE: estima el aumento de ocupación potencial si se hubiera bajado el precio, y calcula el revenue adicional. 6. Suma el total de oportunidad de ingresos no capturada en el periodo. 7. Retorna la tabla detallada por fecha y el total agregado. 8. El frontend muestra el monto total de oportunidad destacado como KPI principal.
+Flujos alternativos
+3a. Solo hay recomendaciones HOLD para el periodo: la oportunidad es MXN $0 y se indica que el pricing estuvo óptimo. 5a. No hay datos de ocupación real para días DECREASE: se omite el cálculo estimado de ocupación.
+Excepciones
+El cálculo de oportunidad en días DECREASE es una estimación basada en elasticidad de demanda simplificada; se presenta como indicativo.
+Restricciones
+El reporte es de carácter indicativo; el impacto real depende de factores de mercado no modelados.
+F. Módulo de Configuración
+CU-15: Registrar nuevo hotel en el sistema
+ID
+CU-15
+Nombre
+Registrar nuevo hotel en el sistema
+Actor principal
+Administrador del sistema
+Precondición
+El administrador tiene acceso al sistema con permisos de administración. El hotel no está previamente registrado.
+Postcondición
+El hotel queda registrado en la tabla Hotel con su código, nombre y precio base. Todas las operaciones de ingesta y análisis posteriores quedan vinculadas a ese hotel.
+Flujo principal
+1. El administrador accede al endpoint de configuración. 2. Proporciona: nombre del hotel, código corto (p. ej. WGLM), número de habitaciones disponibles y precio base. 3. El sistema valida que el código no esté duplicado. 4. Crea el registro en la tabla Hotel. 5. Retorna confirmación con el ID asignado al hotel.
+Flujos alternativos
+3a. El código ya existe: el sistema retorna error 409 (conflicto).
+Excepciones
+Si faltan campos obligatorios (nombre, código, habitaciones), retorna error 400.
+Restricciones
+El código del hotel debe ser único. El número de habitaciones disponibles se usa como divisor en el cálculo de ocupación.
+CU-16: Registrar o actualizar competidor del set competitivo
+ID
+CU-16
+Nombre
+Registrar o actualizar competidor del set competitivo
+Actor principal
+Revenue Manager / Administrador del sistema
+Precondición
+El hotel está registrado. El competidor puede ser nuevo o ya existir en el sistema.
+Postcondición
+El competidor queda registrado o actualizado en la tabla Competitor, vinculado al hotel. Sus precios futuros de Excel serán asociados a este registro.
+Flujo principal
+1. El Revenue Manager carga un archivo Excel de Expedia (CU-04). 2. El sistema detecta los nombres de hoteles en las filas del Excel. 3. Si el nombre no coincide con ningún Competitor existente del hotel, crea un nuevo registro. 4. Si ya existe, reutiliza el registro existente para asociar los precios. 5. Los precios se almacenan en CompetitorMarketRates con referencia al Competitor.
+Flujos alternativos
+3a. El nombre del hotel en el Excel difiere ligeramente del registrado (mayúsculas, espacios): el sistema intenta coincidencia aproximada; si no hay match, crea nuevo registro. 1a. El administrador registra manualmente un competidor sin cargar Excel: puede hacerlo mediante endpoint POST /competitors.
+Excepciones
+Si se detectan más de 20 competidores distintos en un solo archivo Excel, el sistema notifica al administrador.
+Restricciones
+Cada competidor está vinculado a un hotel específico. El nombre del competidor proviene directamente del Excel de Expedia.
+G. Resumen de Actores y Casos de Uso
+ID
+Nombre del Caso de Uso
+Actor Principal
+Módulo
+CU-01
+Cargar archivo XML de reservas (Reservation Entered On)
+Revenue Manager
+Ingesta
+CU-02
+Cargar archivo XML de histórico y pronóstico (History and Forecast)
+Revenue Manager
+Ingesta
+CU-03
+Cargar archivo XML de distribución de tarifas CRS (RoomRateDistribution)
+Revenue Manager
+Ingesta
+CU-04
+Cargar grilla de precios de competencia desde Expedia (Excel)
+Revenue Manager
+Ingesta
+CU-05
+Consultar métricas diarias (ocupación, ADR, revenue)
+Revenue Manager
+Métricas
+CU-06
+Consultar recomendaciones de precios por rango de fechas
+Revenue Manager
+Recomendaciones
+CU-07
+Consultar y gestionar alertas activas
+Revenue Manager
+Alertas
+CU-08
+Generar reporte de pickup de reservas
+Revenue Manager
+Reportes
+CU-09
+Generar reporte de varianza de pronóstico (Forecast Variance)
+Revenue Manager
+Reportes
+CU-10
+Generar reporte de posición de mercado
+Revenue Manager
+Reportes
+CU-11
+Generar resumen ejecutivo
+Revenue Manager
+Reportes
+CU-12
+Generar reporte de reconciliación CRS vs. RMS
+Revenue Manager
+Reportes
+CU-13
+Generar reporte de cumplimiento de recomendaciones
+Revenue Manager
+Reportes
+CU-14
+Generar reporte de oportunidad de ingresos (Revenue Opportunity)
+Revenue Manager
+Reportes
+CU-15
+Registrar nuevo hotel en el sistema
+Administrador del sistema
+Configuración
+CU-16
+Registrar o actualizar competidor del set competitivo
+Revenue Manager / Administrador del sistema
+Configuración
+
+Diagramas de secuencia
+Código
+Encuestas
+Manual de usuario
+Publicaciones

@@ -64,7 +64,29 @@
   align-items: start;
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(0, 1fr) minmax(180px, 220px);
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 220px) auto;
+}
+
+.export-actions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  min-height: 56px;
+}
+
+.export-actions button {
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  font-weight: 800;
+  min-height: 36px;
+  white-space: nowrap;
+}
+
+.export-actions mat-icon {
+  font-size: 18px;
+  height: 18px;
+  width: 18px;
 }
 
 .kpi-strip {
@@ -132,6 +154,28 @@
 
 .enterprise-table {
   min-width: 1280px;
+}
+
+.header-label {
+  align-items: center;
+  display: inline-flex;
+  gap: 3px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.header-info {
+  color: #64748b;
+  cursor: help;
+  font-size: 13px;
+  height: 13px;
+  opacity: 0.78;
+  width: 13px;
+}
+
+.header-info:hover {
+  color: var(--brand-700);
+  opacity: 1;
 }
 
 .enterprise-table tr.mat-mdc-row {
@@ -281,5 +325,14 @@
 
   .kpi-strip {
     grid-template-columns: 1fr;
+  }
+
+  .export-actions {
+    justify-content: stretch;
+  }
+
+  .export-actions button {
+    flex: 1;
+    min-width: 0;
   }
 }

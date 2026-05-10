@@ -1,3 +1,4 @@
+import { HttpResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -27,6 +28,28 @@ export class BiService {
     hotelId = environment.defaultHotelId,
   ): Observable<RevenueCalendarResponse> {
     return this.api.get<RevenueCalendarResponse>('/bi/revenue-calendar', {
+      hotelId,
+      startDate: dateRange.startDate,
+      endDate: dateRange.endDate,
+    });
+  }
+
+  exportCsv(
+    dateRange: DateRange,
+    hotelId = environment.defaultHotelId,
+  ): Observable<HttpResponse<Blob>> {
+    return this.api.getBlob('/bi/export/csv', {
+      hotelId,
+      startDate: dateRange.startDate,
+      endDate: dateRange.endDate,
+    });
+  }
+
+  exportPdf(
+    dateRange: DateRange,
+    hotelId = environment.defaultHotelId,
+  ): Observable<HttpResponse<Blob>> {
+    return this.api.getBlob('/bi/export/pdf', {
       hotelId,
       startDate: dateRange.startDate,
       endDate: dateRange.endDate,

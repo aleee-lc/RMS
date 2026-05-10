@@ -1,4 +1,5 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Query, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { HotelContextService } from '../common/hotel-context.service';
 import { parseIsoDate, toUtcDateOnly } from '../common/utils/date.util';
 import { BiService } from './bi.service';
@@ -56,6 +57,36 @@ export class BiController {
     return this.biService.getCompSetIntelligence(hotel, range.startDate, range.endDate);
   }
 
+  @Get('export/csv')
+  async exportCsv(@Query() query: BiQueryDto, @Res() res: Response): Promise<void> {
+    const hotel = await this.hotelContextService.resolveHotel(query.hotelId);
+    const range = this.resolveExportRange(query);
+    const file = await this.biService.exportRevenueCalendarCsv(
+      hotel,
+      range.startDate,
+      range.endDate
+    );
+
+    res.setHeader('Content-Type', file.contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+    res.send(file.buffer);
+  }
+
+  @Get('export/pdf')
+  async exportPdf(@Query() query: BiQueryDto, @Res() res: Response): Promise<void> {
+    const hotel = await this.hotelContextService.resolveHotel(query.hotelId);
+    const range = this.resolveExportRange(query);
+    const file = await this.biService.exportRevenueCalendarPdf(
+      hotel,
+      range.startDate,
+      range.endDate
+    );
+
+    res.setHeader('Content-Type', file.contentType);
+    res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
+    res.send(file.buffer);
+  }
+
   private resolveRange(query: BiQueryDto): { startDate: Date; endDate: Date } {
     const today = toUtcDateOnly(new Date());
     const startDate = parseIsoDate(query.startDate) ?? today;
@@ -68,5 +99,17 @@ export class BiController {
       })();
 
     return { startDate, endDate };
+  }
+
+  private resolveExportRange(query: BiQueryDto): { startDate: Date; endDate: Date } {
+    const range = this.resolveRange(query);
+
+    if (range.endDate < range.startDate) {
+      throw new BadRequestException(
+        'El rango de fechas es invalido: endDate debe ser mayor o igual a startDate.'
+      );
+    }
+
+    return range;
   }
 }

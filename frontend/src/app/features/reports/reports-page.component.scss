@@ -26,6 +26,7 @@
   gap: var(--space-2);
   text-align: left;
   cursor: pointer;
+  min-width: 0;
 }
 
 .report-selector.active {
@@ -92,8 +93,9 @@
 }
 
 .summary-tile strong {
-  font-size: 1.1rem;
+  font-size: clamp(1rem, 1.5vw, 1.25rem);
   color: var(--text-strong);
+  overflow-wrap: anywhere;
 }
 
 .summary-tile.ok {
@@ -226,6 +228,32 @@
 
   .parameter-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .report-hub,
+  .chart-section,
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .selector-meta {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .table-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .table-actions button {
+    width: 100%;
+  }
+
+  .chart-wrap {
+    height: 240px;
   }
 }
 

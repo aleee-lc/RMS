@@ -165,8 +165,25 @@ pre {
 }
 
 @media (max-width: 760px) {
+  .upload-header {
+    padding: 14px;
+  }
+
   .source-grid,
   .wizard-grid {
     grid-template-columns: 1fr;
+  }
+
+  .inline-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .inline-actions button {
+    width: 100%;
+  }
+
+  .file-name {
+    max-width: 100%;
   }
 }

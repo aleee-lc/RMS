@@ -194,7 +194,8 @@ export class RecommendationService {
             ${recommendation.yourPrice},
             ${recommendation.marketAverage},
             ${recommendation.priceDiffPct},
-            ${recommendation.demandFactor}
+            ${recommendation.demandFactor},
+            NOW()
           )`
         )
       );
@@ -211,7 +212,8 @@ export class RecommendationService {
           "yourPrice",
           "marketAverage",
           "priceDiffPct",
-          "demandFactor"
+          "demandFactor",
+          "updatedAt"
         )
         VALUES ${values}
         ON CONFLICT ("hotelId", "date") DO UPDATE SET

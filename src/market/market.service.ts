@@ -410,13 +410,6 @@ export class MarketService {
     }
 
     if (typeof (this.prisma as any).$queryRaw === 'function') {
-      const values = Prisma.join(
-        marketRateInputs.map(
-          (input) =>
-            Prisma.sql`(${hotelId}, ${input.date}, ${input.yourPrice}, ${input.marketAverage}, ${fileName})`
-        )
-      );
-
       return this.prisma.$queryRaw<
         {
           id: number;
@@ -426,8 +419,20 @@ export class MarketService {
           marketAverage: Prisma.Decimal | number | null;
         }[]
       >`
-        INSERT INTO "MarketRates" ("hotelId", "date", "yourPrice", "marketAverage", "sourceFile")
-        VALUES ${values}
+        INSERT INTO "MarketRates" (
+          "hotelId",
+          "date",
+          "yourPrice",
+          "marketAverage",
+          "sourceFile",
+          "updatedAt"
+        )
+        VALUES ${Prisma.join(
+          marketRateInputs.map(
+            (input) =>
+              Prisma.sql`(${hotelId}, ${input.date}, ${input.yourPrice}, ${input.marketAverage}, ${fileName}, NOW())`
+          )
+        )}
         ON CONFLICT ("hotelId", "date") DO UPDATE SET
           "yourPrice" = EXCLUDED."yourPrice",
           "marketAverage" = EXCLUDED."marketAverage",

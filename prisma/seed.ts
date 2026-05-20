@@ -35,6 +35,7 @@ async function main() {
     where: { email: adminEmail },
     update: {
       name: process.env.SEED_ADMIN_NAME ?? 'RevSight Admin',
+      passwordHash: hashPassword(adminPassword),
       role: 'ADMIN',
       active: true
     },

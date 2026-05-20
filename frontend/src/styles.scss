@@ -305,11 +305,25 @@ a:hover {
 
 @media (max-width: 760px) {
   .page {
-    gap: var(--space-3);
+    gap: 12px;
   }
 
   .page-header {
     gap: var(--space-3);
+  }
+
+  .page-header,
+  .section-card {
+    border-radius: var(--radius-md);
+  }
+
+  .page-title h1 {
+    font-size: 1.25rem;
+    line-height: 1.25;
+  }
+
+  .page-title p {
+    font-size: 0.82rem;
   }
 
   .data-table {

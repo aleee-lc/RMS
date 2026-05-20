@@ -18,7 +18,12 @@ export class MetricsService {
           lte: toUtcDateOnly(endDate)
         }
       },
-      orderBy: { arrivalDate: 'asc' }
+      select: {
+        arrivalDate: true,
+        noOfRooms: true,
+        roomRate: true,
+        sourceStatus: true
+      }
     });
 
     const daily = new Map<string, { bookedRooms: number; revenue: number }>();

@@ -1,4 +1,6 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query } from '@nestjs/common';
+import { AuthenticatedUser } from '../auth/auth.types';
+import { CurrentUser } from '../auth/current-user.decorator';
 import { DateRangeQueryDto } from '../common/dto/date-range-query.dto';
 import { HotelContextService } from '../common/hotel-context.service';
 import { enumerateDateRange, parseIsoDate, toUtcDateOnly } from '../common/utils/date.util';
@@ -13,8 +15,11 @@ export class RecommendationController {
   ) {}
 
   @Get()
-  async getRecommendations(@Query() query: DateRangeQueryDto) {
-    const hotel = await this.hotelContextService.resolveHotel(query.hotelId);
+  async getRecommendations(
+    @Query() query: DateRangeQueryDto,
+    @CurrentUser() user: AuthenticatedUser
+  ) {
+    const hotel = await this.hotelContextService.resolveHotelForUser(user, query.hotelId);
 
     const startDate = parseIsoDate(query.startDate) ?? toUtcDateOnly(new Date());
     const endDate =
@@ -49,9 +54,10 @@ export class RecommendationController {
   @HttpCode(HttpStatus.OK)
   async generateRecommendations(
     @Query() query: DateRangeQueryDto,
+    @CurrentUser() user: AuthenticatedUser,
     @Body() options: GenerateRecommendationsOptionsDto = {}
   ) {
-    const hotel = await this.hotelContextService.resolveHotel(query.hotelId);
+    const hotel = await this.hotelContextService.resolveHotelForUser(user, query.hotelId);
 
     const startDate = parseIsoDate(query.startDate) ?? toUtcDateOnly(new Date());
     const endDate =

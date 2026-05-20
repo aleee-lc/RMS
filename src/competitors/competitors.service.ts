@@ -19,7 +19,9 @@ export class CompetitorsService {
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        throw new ConflictException(`Competitor "${input.name}" already exists for hotel ${hotelId}`);
+        throw new ConflictException(
+          `Competitor "${input.name}" already exists for hotel ${hotelId}`
+        );
       }
       throw error;
     }
@@ -34,12 +36,7 @@ export class CompetitorsService {
   }
 
   async update(id: number, input: UpdateCompetitorDto) {
-    const competitor = await this.prisma.competitor.findUnique({
-      where: { id }
-    });
-    if (!competitor) {
-      throw new NotFoundException(`Competitor ${id} not found`);
-    }
+    await this.getById(id);
 
     try {
       return await this.prisma.competitor.update({
@@ -57,16 +54,21 @@ export class CompetitorsService {
   }
 
   async remove(id: number) {
+    await this.getById(id);
+
+    await this.prisma.competitor.delete({
+      where: { id }
+    });
+  }
+
+  async getById(id: number) {
     const competitor = await this.prisma.competitor.findUnique({
       where: { id }
     });
     if (!competitor) {
       throw new NotFoundException(`Competitor ${id} not found`);
     }
-
-    await this.prisma.competitor.delete({
-      where: { id }
-    });
+    return competitor;
   }
 
   private async assertHotelExists(hotelId: number): Promise<void> {

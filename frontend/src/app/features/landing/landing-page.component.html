@@ -1,0 +1,104 @@
+<div class="landing" [style.--page-progress]="scrollProgress()">
+  <header class="landing-nav" aria-label="RevSight">
+    <a class="brand" routerLink="/">
+      <img src="/revsight-logo.svg" alt="RevSight" />
+    </a>
+    <nav>
+      <a href="#platform">Plataforma</a>
+      <a href="#workflow">Flujo</a>
+      <a routerLink="/revenue-intelligence" class="nav-cta">Entrar</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div class="hero-copy">
+      <span class="eyebrow">Revenue Management BI para hoteles</span>
+      <h1>Revenue intelligence que responde al ritmo real de tu hotel.</h1>
+      <p>
+        RevSight convierte ocupacion, pickup, tarifas y competencia en senales visuales para decidir
+        precio con menos intuicion y mas evidencia.
+      </p>
+      <div class="hero-actions">
+        <a routerLink="/revenue-intelligence" class="primary-action">
+          Entrar al sistema
+          <mat-icon>arrow_forward</mat-icon>
+        </a>
+        <a routerLink="/reports" class="secondary-action">Explorar reportes</a>
+      </div>
+      <p class="access-note">
+        Acceso temporal directo mientras se define login, roles y permisos.
+      </p>
+    </div>
+
+    <div class="hero-visual" aria-hidden="true">
+      <div class="dashboard-glass">
+        <div class="glass-top">
+          <span></span><span></span><span></span>
+        </div>
+        <div class="kpi-strip">
+          <div *ngFor="let metric of metrics">
+            <strong>{{ metric.value }}</strong>
+            <small>{{ metric.label }}</small>
+          </div>
+        </div>
+        <div class="signal-chart">
+          <i style="height: 38%"></i>
+          <i style="height: 64%"></i>
+          <i style="height: 52%"></i>
+          <i style="height: 82%"></i>
+          <i style="height: 70%"></i>
+          <i style="height: 92%"></i>
+          <i style="height: 58%"></i>
+        </div>
+        <div class="decision-row">
+          <span>Subir tarifa</span>
+          <strong>+8.4%</strong>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="capabilities" id="platform">
+    <div class="section-heading">
+      <span>La plataforma</span>
+      <h2>Disenada para revenue managers que necesitan actuar hoy.</h2>
+    </div>
+    <div class="capability-grid">
+      <article *ngFor="let item of capabilities">
+        <mat-icon>{{ item.icon }}</mat-icon>
+        <h3>{{ item.title }}</h3>
+        <p>{{ item.text }}</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="scroll-story" id="workflow">
+    <div class="sticky-device" aria-hidden="true">
+      <div class="device-screen">
+        <span class="live-dot"></span>
+        <div class="screen-title">Opportunity Score</div>
+        <div class="score-ring">87</div>
+        <div class="screen-bars">
+          <span></span><span></span><span></span><span></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="story-copy">
+      <article *ngFor="let step of story">
+        <span>{{ step.kicker }}</span>
+        <h2>{{ step.title }}</h2>
+        <p>{{ step.text }}</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="closing">
+    <span>Listo para operar</span>
+    <h2>Del dato bruto a una decision tarifaria clara.</h2>
+    <a routerLink="/revenue-intelligence" class="primary-action">
+      Entrar al sistema
+      <mat-icon>login</mat-icon>
+    </a>
+  </section>
+</div>

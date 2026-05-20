@@ -1,0 +1,45 @@
+<section class="login-page">
+  <mat-card class="login-card">
+    <mat-card-header>
+      <mat-card-title>RevSight</mat-card-title>
+      <mat-card-subtitle>Acceso al Revenue Command Center</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <mat-progress-bar *ngIf="loading()" mode="indeterminate" />
+
+      <form class="login-form" (ngSubmit)="onSubmit()">
+        <mat-form-field appearance="outline">
+          <mat-label>Email</mat-label>
+          <input
+            matInput
+            type="email"
+            autocomplete="email"
+            [ngModel]="email()"
+            name="email"
+            (ngModelChange)="email.set($event)"
+          />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Password</mat-label>
+          <input
+            matInput
+            type="password"
+            autocomplete="current-password"
+            [ngModel]="password()"
+            name="password"
+            (ngModelChange)="password.set($event)"
+          />
+        </mat-form-field>
+
+        <div class="state-card" *ngIf="error() as message">{{ message }}</div>
+
+        <button mat-flat-button color="primary" type="submit" [disabled]="loading()">
+          <mat-icon>login</mat-icon>
+          Entrar
+        </button>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</section>

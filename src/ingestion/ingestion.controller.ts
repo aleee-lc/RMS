@@ -10,6 +10,8 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
+import { AuthenticatedUser } from '../auth/auth.types';
+import { CurrentUser } from '../auth/current-user.decorator';
 import { HotelQueryDto } from '../common/dto/hotel-query.dto';
 import { HotelContextService } from '../common/hotel-context.service';
 import { IngestionService } from './ingestion.service';
@@ -39,12 +41,16 @@ export class IngestionController {
       }
     })
   )
-  async uploadXml(@UploadedFile() file: Express.Multer.File, @Query() query: HotelQueryDto) {
+  async uploadXml(
+    @UploadedFile() file: Express.Multer.File,
+    @Query() query: HotelQueryDto,
+    @CurrentUser() user: AuthenticatedUser
+  ) {
     if (!file?.buffer) {
       throw new BadRequestException('Missing XML file in multipart form field "file"');
     }
 
-    const hotel = await this.hotelContextService.resolveHotel(query.hotelId);
+    const hotel = await this.hotelContextService.resolveHotelForUser(user, query.hotelId);
     const result = await this.ingestionService.ingestXml(file.buffer, file.originalname, hotel.id);
 
     return {
@@ -72,12 +78,16 @@ export class IngestionController {
       }
     })
   )
-  async uploadExcel(@UploadedFile() file: Express.Multer.File, @Query() query: HotelQueryDto) {
+  async uploadExcel(
+    @UploadedFile() file: Express.Multer.File,
+    @Query() query: HotelQueryDto,
+    @CurrentUser() user: AuthenticatedUser
+  ) {
     if (!file?.buffer) {
       throw new BadRequestException('Missing Excel file in multipart form field "file"');
     }
 
-    const hotel = await this.hotelContextService.resolveHotel(query.hotelId);
+    const hotel = await this.hotelContextService.resolveHotelForUser(user, query.hotelId);
     const result = await this.ingestionService.ingestExcel(
       file.buffer,
       file.originalname,

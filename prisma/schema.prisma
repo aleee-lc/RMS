@@ -20,6 +20,48 @@ enum RecommendationAction {
   HOLD
 }
 
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum HotelRole {
+  OWNER
+  MANAGER
+  ANALYST
+  VIEWER
+}
+
+model User {
+  id            Int               @id @default(autoincrement())
+  email         String            @unique
+  name          String
+  passwordHash  String
+  role          UserRole          @default(USER)
+  active        Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  memberships   HotelMembership[]
+
+  @@index([email])
+}
+
+model HotelMembership {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  hotelId   Int
+  role      HotelRole @default(VIEWER)
+  isDefault Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hotel     Hotel     @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, hotelId])
+  @@index([hotelId])
+  @@index([userId, isDefault])
+}
+
 model Hotel {
   id              Int                      @id @default(autoincrement())
   code            String                   @unique
@@ -38,6 +80,7 @@ model Hotel {
   crsSnapshots    CrsRoomRateDistributionSnapshot[]
   rateShopSnapshots RateShopSnapshot[]
   recommendationSettings RecommendationSettings?
+  memberships     HotelMembership[]
 
   @@index([name])
 }

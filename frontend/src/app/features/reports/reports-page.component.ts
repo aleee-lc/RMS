@@ -9,6 +9,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { ChartConfiguration } from 'chart.js';
+import { BaseChartDirective } from 'ng2-charts';
 import { catchError, forkJoin, map, of } from 'rxjs';
 import { DateRange } from '../../core/models/date-range.model';
 import { ReportResponse } from '../../core/models/report.model';
@@ -60,8 +62,20 @@ interface SummaryItem {
   tone?: 'ok' | 'warn' | 'info';
 }
 
+type ReportChartType = 'bar' | 'line' | 'doughnut';
+
+interface ReportChartView<TType extends ReportChartType = ReportChartType> {
+  id: string;
+  title: string;
+  subtitle: string;
+  type: TType;
+  data: ChartConfiguration<TType>['data'];
+  options: ChartConfiguration<TType>['options'];
+}
+
 interface ReportView {
   summary: SummaryItem[];
+  charts: ReportChartView[];
   primaryTable: TableView | null;
   secondaryTable: TableView | null;
   notes: string[];
@@ -131,6 +145,7 @@ const REPORT_CATALOG: ReportCatalogItem[] = [
     MatInputModule,
     MatProgressBarModule,
     MatSnackBarModule,
+    BaseChartDirective,
     DateRangeFilterComponent
   ],
   templateUrl: './reports-page.component.html',
@@ -277,6 +292,10 @@ export class ReportsPageComponent {
     this.exportTableAsCsv(table, `${this.selectedReport()}-secondary`);
   }
 
+  onPrintReport(): void {
+    window.print();
+  }
+
   hasRows(table: TableView | null): boolean {
     return Boolean(table?.rows.length);
   }
@@ -400,6 +419,7 @@ export class ReportsPageComponent {
     if (!report) {
       return {
         summary: [],
+        charts: [],
         primaryTable: null,
         secondaryTable: null,
         notes: ['No hay datos cargados para este reporte en el rango seleccionado.']
@@ -426,6 +446,24 @@ export class ReportsPageComponent {
               tone: 'info'
             }
           ],
+          charts: [
+            this.buildBarChart(
+              'pickup-booking-revenue',
+              'Revenue por fecha de booking',
+              'Ingresos capturados segun fecha de reserva.',
+              this.rows(data['daily_booking_pickup']),
+              'booking_date',
+              [{ key: 'revenue_booked', label: 'Revenue booked', color: '#0d9488' }]
+            ),
+            this.buildBarChart(
+              'pickup-stay-rooms',
+              'Rooms booked por fecha de stay',
+              'Volumen de habitaciones por fecha de llegada.',
+              this.rows(data['stay_date_pickup']),
+              'stay_date',
+              [{ key: 'rooms_booked', label: 'Rooms booked', color: '#2563eb' }]
+            )
+          ].filter(this.hasChartData),
           primaryTable: {
             id: 'pickup-booking',
             title: 'Pickup por fecha de booking',
@@ -489,6 +527,36 @@ export class ReportsPageComponent {
               tone: 'info'
             }
           ],
+          charts: [
+            this.buildLineChart(
+              'forecast-variance-trend',
+              'Varianza diaria contra forecast',
+              'Diferencia de habitaciones e ingresos frente al baseline.',
+              this.rows(data['items']),
+              'date',
+              [
+                { key: 'variance_rooms', label: 'Variance rooms', color: '#0d9488' },
+                { key: 'variance_revenue', label: 'Variance revenue', color: '#c2410c', axis: 'yMoney' }
+              ]
+            ),
+            this.buildStatusDoughnut(
+              'forecast-variance-status',
+              'Dias above / below forecast',
+              'Distribucion ejecutiva de cumplimiento del forecast.',
+              [
+                {
+                  label: 'Above forecast',
+                  value: this.numberValue(this.record(data['summary'])['above_forecast_days']),
+                  color: '#16a34a'
+                },
+                {
+                  label: 'Below forecast',
+                  value: this.numberValue(this.record(data['summary'])['below_forecast_days']),
+                  color: '#ea580c'
+                }
+              ]
+            )
+          ].filter(this.hasChartData),
           primaryTable: {
             id: 'forecast-variance',
             title: 'Detalle diario de varianza',
@@ -531,6 +599,46 @@ export class ReportsPageComponent {
               value: this.formatCell('price_gap_pct', this.record(data['summary'])['avg_price_gap_pct'])
             }
           ],
+          charts: [
+            this.buildLineChart(
+              'market-position-price',
+              'Tarifa propia vs mercado',
+              'Lectura rapida de alineacion competitiva por fecha.',
+              this.rows(data['items']),
+              'date',
+              [
+                { key: 'your_price', label: 'Tu tarifa', color: '#0d9488', axis: 'yMoney' },
+                {
+                  key: 'market_average',
+                  label: 'Promedio mercado',
+                  color: '#2563eb',
+                  axis: 'yMoney'
+                }
+              ]
+            ),
+            this.buildStatusDoughnut(
+              'market-position-status',
+              'Posicion competitiva',
+              'Dias por debajo, alineados o por encima del mercado.',
+              [
+                {
+                  label: 'Underpriced',
+                  value: this.numberValue(this.record(data['summary'])['underpriced_days']),
+                  color: '#16a34a'
+                },
+                {
+                  label: 'Aligned',
+                  value: this.numberValue(this.record(data['summary'])['aligned_days']),
+                  color: '#2563eb'
+                },
+                {
+                  label: 'Overpriced',
+                  value: this.numberValue(this.record(data['summary'])['overpriced_days']),
+                  color: '#ea580c'
+                }
+              ]
+            )
+          ].filter(this.hasChartData),
           primaryTable: {
             id: 'market-position',
             title: 'Posicion diaria frente al mercado',
@@ -571,6 +679,33 @@ export class ReportsPageComponent {
               value: this.formatCell('tolerance_pct', this.record(data['summary'])['tolerance_pct'])
             }
           ],
+          charts: [
+            this.buildStatusDoughnut(
+              'recommendation-compliance-status',
+              'Cumplimiento de recomendaciones',
+              'Proporcion de recomendaciones ejecutadas vs pendientes.',
+              [
+                {
+                  label: 'Compliant',
+                  value: this.numberValue(this.record(data['summary'])['compliant']),
+                  color: '#16a34a'
+                },
+                {
+                  label: 'Non compliant',
+                  value: this.numberValue(this.record(data['summary'])['non_compliant']),
+                  color: '#dc2626'
+                }
+              ]
+            ),
+            this.buildBarChart(
+              'recommendation-compliance-gap',
+              'Gap de precio recomendado',
+              'Diferencia porcentual frente a la recomendacion.',
+              this.rows(data['items']).slice(0, 20),
+              'date',
+              [{ key: 'price_gap_pct', label: 'Price gap %', color: '#7c3aed' }]
+            )
+          ].filter(this.hasChartData),
           primaryTable: {
             id: 'recommendation-compliance',
             title: 'Ejecucion de recomendaciones',
@@ -618,6 +753,27 @@ export class ReportsPageComponent {
               value: this.formatCell('risk_days', this.record(data['summary'])['risk_days'])
             }
           ],
+          charts: [
+            this.buildBarChart(
+              'revenue-opportunity-impact',
+              'Oportunidad y riesgo por dia',
+              'Potencial de ingreso y riesgo de sobreprecio.',
+              this.rows(data['items']),
+              'date',
+              [
+                { key: 'upside_potential', label: 'Upside', color: '#16a34a' },
+                { key: 'overpricing_risk', label: 'Riesgo', color: '#ea580c' }
+              ]
+            ),
+            this.buildBarChart(
+              'revenue-opportunity-top',
+              'Top dias de upside',
+              'Dias con mayor oportunidad estimada.',
+              this.rows(data['top_upside_days']),
+              'date',
+              [{ key: 'upside_potential', label: 'Upside', color: '#0d9488' }]
+            )
+          ].filter(this.hasChartData),
           primaryTable: {
             id: 'revenue-opportunity',
             title: 'Detalle diario de oportunidad',
@@ -666,6 +822,38 @@ export class ReportsPageComponent {
               tone: 'warn'
             }
           ],
+          charts: [
+            this.buildStatusDoughnut(
+              'executive-risk-mix',
+              'Senales ejecutivas',
+              'Combinacion de alertas activas y dias con oportunidad.',
+              [
+                {
+                  label: 'Alertas activas',
+                  value: this.numberValue(this.record(data['kpis'])['active_alerts']),
+                  color: '#ea580c'
+                },
+                {
+                  label: 'Top upside days',
+                  value: this.rows(this.record(data['highlights'])['top_upside_days']).length,
+                  color: '#16a34a'
+                },
+                {
+                  label: 'Alertas abiertas top',
+                  value: this.rows(this.record(data['highlights'])['open_alerts']).length,
+                  color: '#2563eb'
+                }
+              ]
+            ),
+            this.buildBarChart(
+              'executive-top-upside',
+              'Top oportunidades de ingreso',
+              'Dias que requieren decision directiva de precio.',
+              this.rows(this.record(data['highlights'])['top_upside_days']),
+              'date',
+              [{ key: 'upside_potential', label: 'Upside', color: '#0d9488' }]
+            )
+          ].filter(this.hasChartData),
           primaryTable: {
             id: 'executive-top-upside',
             title: 'Top dias de upside',
@@ -742,6 +930,27 @@ export class ReportsPageComponent {
               value: this.formatCell('basis', data['comparison_basis'])
             }
           ],
+          charts: [
+            this.buildBarChart(
+              'crs-reconciliation-variance',
+              'Varianza CRS vs RMS',
+              'Diferencias por metrica clave.',
+              rows,
+              'metric',
+              [
+                { key: 'rms_actual', label: 'RMS actual', color: '#0d9488' },
+                { key: 'crs_baseline', label: 'CRS baseline', color: '#2563eb' }
+              ]
+            ),
+            this.buildBarChart(
+              'crs-reconciliation-delta',
+              'Delta por metrica',
+              'Magnitud de diferencias detectadas.',
+              rows,
+              'metric',
+              [{ key: 'delta', label: 'Delta', color: '#ea580c' }]
+            )
+          ].filter(this.hasChartData),
           primaryTable: {
             id: 'crs-reconciliation-variance',
             title: 'Varianza por metrica',
@@ -769,6 +978,7 @@ export class ReportsPageComponent {
       default:
         return {
           summary: [],
+          charts: [],
           primaryTable: null,
           secondaryTable: null,
           notes: ['Reporte no soportado por la vista actual.']
@@ -788,6 +998,164 @@ export class ReportsPageComponent {
 
   private record(value: unknown): Record<string, unknown> {
     return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
+  }
+
+  private buildBarChart(
+    id: string,
+    title: string,
+    subtitle: string,
+    rows: Record<string, unknown>[],
+    labelKey: string,
+    series: { key: string; label: string; color: string }[]
+  ): ReportChartView<'bar'> {
+    const limitedRows = rows.slice(0, 30);
+
+    return {
+      id,
+      title,
+      subtitle,
+      type: 'bar',
+      data: {
+        labels: limitedRows.map((row) => this.shortLabel(row[labelKey])),
+        datasets: series.map((item) => ({
+          data: limitedRows.map((row) => this.numberValue(row[item.key])),
+          label: item.label,
+          backgroundColor: item.color,
+          borderColor: item.color,
+          borderWidth: 1,
+          borderRadius: 4
+        }))
+      },
+      options: this.cartesianChartOptions()
+    };
+  }
+
+  private buildLineChart(
+    id: string,
+    title: string,
+    subtitle: string,
+    rows: Record<string, unknown>[],
+    labelKey: string,
+    series: { key: string; label: string; color: string; axis?: 'y' | 'yMoney' }[]
+  ): ReportChartView<'line'> {
+    const limitedRows = rows.slice(0, 45);
+
+    return {
+      id,
+      title,
+      subtitle,
+      type: 'line',
+      data: {
+        labels: limitedRows.map((row) => this.shortLabel(row[labelKey])),
+        datasets: series.map((item) => ({
+          data: limitedRows.map((row) => this.numberValue(row[item.key])),
+          label: item.label,
+          yAxisID: item.axis ?? 'y',
+          borderColor: item.color,
+          backgroundColor: `${item.color}24`,
+          tension: 0.25,
+          fill: false,
+          pointRadius: 2
+        }))
+      },
+      options: this.cartesianChartOptions(series.some((item) => item.axis === 'yMoney'))
+    };
+  }
+
+  private buildStatusDoughnut(
+    id: string,
+    title: string,
+    subtitle: string,
+    segments: { label: string; value: number; color: string }[]
+  ): ReportChartView<'doughnut'> {
+    return {
+      id,
+      title,
+      subtitle,
+      type: 'doughnut',
+      data: {
+        labels: segments.map((item) => item.label),
+        datasets: [
+          {
+            data: segments.map((item) => item.value),
+            backgroundColor: segments.map((item) => item.color),
+            borderColor: '#ffffff',
+            borderWidth: 2
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom'
+          }
+        },
+        cutout: '62%'
+      }
+    };
+  }
+
+  private cartesianChartOptions(hasMoneyAxis = false): ChartConfiguration<'bar' | 'line'>['options'] {
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
+      plugins: {
+        legend: {
+          position: 'bottom'
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true
+        },
+        ...(hasMoneyAxis
+          ? {
+              yMoney: {
+                type: 'linear' as const,
+                position: 'right' as const,
+                beginAtZero: true,
+                grid: {
+                  drawOnChartArea: false
+                },
+                ticks: {
+                  callback: (value) => this.currencyFormatter.format(Number(value))
+                }
+              }
+            }
+          : {})
+      }
+    };
+  }
+
+  private hasChartData(chart: ReportChartView): boolean {
+    return chart.data.datasets.some((dataset) => {
+      const values = dataset.data as unknown[];
+      return values.some((value) => typeof value === 'number' && Number.isFinite(value) && value !== 0);
+    });
+  }
+
+  private numberValue(value: unknown): number {
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : 0;
+    }
+
+    if (typeof value === 'string') {
+      const parsed = Number(value.replace(/[$,%\s,]/g, ''));
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    return 0;
+  }
+
+  private shortLabel(value: unknown): string {
+    const text = value === null || value === undefined ? '-' : String(value);
+    return text.length > 16 ? `${text.slice(0, 13)}...` : text;
   }
 
   private isPercentColumn(column: string): boolean {

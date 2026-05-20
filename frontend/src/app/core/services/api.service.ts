@@ -2,6 +2,7 @@ import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { AuthService } from './auth.service';
 
 export type QueryParamValue = string | number | boolean | null | undefined;
 
@@ -10,6 +11,7 @@ export type QueryParamValue = string | number | boolean | null | undefined;
 })
 export class ApiService {
   private readonly http = inject(HttpClient);
+  private readonly auth = inject(AuthService);
   private readonly baseUrl = environment.apiBaseUrl;
 
   get<T>(path: string, queryParams?: Record<string, QueryParamValue>): Observable<T> {
@@ -59,6 +61,10 @@ export class ApiService {
     let params = new HttpParams();
 
     if (!queryParams) {
+      const selectedHotelId = this.auth.selectedHotelId();
+      if (selectedHotelId) {
+        params = params.set('hotelId', String(selectedHotelId));
+      }
       return params;
     }
 
@@ -68,6 +74,11 @@ export class ApiService {
       }
 
       params = params.set(key, String(value));
+    }
+
+    const selectedHotelId = this.auth.selectedHotelId();
+    if (selectedHotelId) {
+      params = params.set('hotelId', String(selectedHotelId));
     }
 
     return params;

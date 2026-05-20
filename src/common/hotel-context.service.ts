@@ -1,4 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
+import { AuthenticatedUser } from '../auth/auth.types';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -32,5 +34,35 @@ export class HotelContextService {
     });
 
     return { id: hotel.id, name: hotel.name, totalRooms: hotel.totalRooms };
+  }
+
+  async resolveHotelForUser(
+    user: AuthenticatedUser,
+    hotelId?: number
+  ): Promise<{ id: number; name: string; totalRooms: number }> {
+    if (user.role === UserRole.ADMIN) {
+      return this.resolveHotel(hotelId);
+    }
+
+    const membership = hotelId
+      ? await this.prisma.hotelMembership.findUnique({
+          where: { userId_hotelId: { userId: user.id, hotelId } },
+          include: { hotel: true }
+        })
+      : await this.prisma.hotelMembership.findFirst({
+          where: { userId: user.id },
+          include: { hotel: true },
+          orderBy: [{ isDefault: 'desc' }, { hotelId: 'asc' }]
+        });
+
+    if (!membership) {
+      throw new ForbiddenException('User does not have access to this hotel');
+    }
+
+    return {
+      id: membership.hotel.id,
+      name: membership.hotel.name,
+      totalRooms: membership.hotel.totalRooms
+    };
   }
 }

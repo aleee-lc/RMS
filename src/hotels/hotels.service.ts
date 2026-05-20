@@ -1,5 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, RecommendationSettings } from '@prisma/client';
+import { Prisma, RecommendationSettings, UserRole } from '@prisma/client';
+import { AuthenticatedUser } from '../auth/auth.types';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   normalizeRecommendationSettings,
@@ -32,10 +33,35 @@ export class HotelsService {
     }
   }
 
-  async list() {
-    return this.prisma.hotel.findMany({
-      orderBy: [{ name: 'asc' }]
+  async createForUser(user: AuthenticatedUser, input: CreateHotelDto) {
+    const hotel = await this.create(input);
+    if (user.role !== UserRole.ADMIN) {
+      await this.prisma.hotelMembership.create({
+        data: {
+          userId: user.id,
+          hotelId: hotel.id,
+          role: 'OWNER',
+          isDefault: false
+        }
+      });
+    }
+    return hotel;
+  }
+
+  async list(user?: AuthenticatedUser) {
+    if (!user || user.role === UserRole.ADMIN) {
+      return this.prisma.hotel.findMany({
+        orderBy: [{ name: 'asc' }]
+      });
+    }
+
+    const memberships = await this.prisma.hotelMembership.findMany({
+      where: { userId: user.id },
+      include: { hotel: true },
+      orderBy: [{ isDefault: 'desc' }, { hotel: { name: 'asc' } }]
     });
+
+    return memberships.map((membership) => membership.hotel);
   }
 
   async getById(id: number) {

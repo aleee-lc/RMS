@@ -8,6 +8,8 @@ import {
   Patch,
   Query
 } from '@nestjs/common';
+import { AuthenticatedUser } from '../auth/auth.types';
+import { CurrentUser } from '../auth/current-user.decorator';
 import { AlertsQueryDto } from '../common/dto/alerts-query.dto';
 import { HotelQueryDto } from '../common/dto/hotel-query.dto';
 import { HotelContextService } from '../common/hotel-context.service';
@@ -22,8 +24,8 @@ export class AlertsController {
   ) {}
 
   @Get()
-  async getAlerts(@Query() query: AlertsQueryDto) {
-    const hotel = await this.hotelContextService.resolveHotel(query.hotelId);
+  async getAlerts(@Query() query: AlertsQueryDto, @CurrentUser() user: AuthenticatedUser) {
+    const hotel = await this.hotelContextService.resolveHotelForUser(user, query.hotelId);
 
     const endDate = parseIsoDate(query.endDate) ?? toUtcDateOnly(new Date());
     const startDate =
@@ -57,9 +59,10 @@ export class AlertsController {
   @HttpCode(HttpStatus.OK)
   async resolveAlert(
     @Param('id', ParseIntPipe) id: number,
-    @Query() query: HotelQueryDto
+    @Query() query: HotelQueryDto,
+    @CurrentUser() user: AuthenticatedUser
   ) {
-    const hotel = await this.hotelContextService.resolveHotel(query.hotelId);
+    const hotel = await this.hotelContextService.resolveHotelForUser(user, query.hotelId);
     const alert = await this.alertsService.setResolvedState(hotel.id, id, true);
     return {
       hotel,
@@ -79,9 +82,10 @@ export class AlertsController {
   @HttpCode(HttpStatus.OK)
   async activateAlert(
     @Param('id', ParseIntPipe) id: number,
-    @Query() query: HotelQueryDto
+    @Query() query: HotelQueryDto,
+    @CurrentUser() user: AuthenticatedUser
   ) {
-    const hotel = await this.hotelContextService.resolveHotel(query.hotelId);
+    const hotel = await this.hotelContextService.resolveHotelForUser(user, query.hotelId);
     const alert = await this.alertsService.setResolvedState(hotel.id, id, false);
     return {
       hotel,

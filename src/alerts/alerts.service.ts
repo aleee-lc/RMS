@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { AlertSeverity, RecommendationAction, Recommendations } from '@prisma/client';
+import { AlertSeverity, Prisma, RecommendationAction, Recommendations } from '@prisma/client';
 import { toUtcDateOnly } from '../common/utils/date.util';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -16,49 +16,32 @@ export class AlertsService {
     hotelId: number,
     recommendations: Recommendations[]
   ): Promise<void> {
+    const alertsToUpsert: AlertUpsertInput[] = [];
+    const datesToResolve: Date[] = [];
+
     for (const recommendation of recommendations) {
       if (recommendation.action === RecommendationAction.HOLD) {
-        await this.prisma.alerts.updateMany({
-          where: {
-            hotelId,
-            date: recommendation.date,
-            type: 'pricing-opportunity'
-          },
-          data: { resolved: true }
-        });
+        datesToResolve.push(recommendation.date);
         continue;
       }
 
       const occupancy = recommendation.occupancy === null ? null : Number(recommendation.occupancy);
       const severity = this.pickSeverity(recommendation.action, occupancy);
 
-      await this.prisma.alerts.upsert({
-        where: {
-          hotelId_date_type: {
-            hotelId,
-            date: recommendation.date,
-            type: 'pricing-opportunity'
-          }
-        },
-        update: {
-          recommendationId: recommendation.id,
-          severity,
-          title: `${recommendation.action.toLowerCase()} pricing opportunity`,
-          message: recommendation.explanation,
-          resolved: false
-        },
-        create: {
-          hotelId,
-          recommendationId: recommendation.id,
-          date: recommendation.date,
-          type: 'pricing-opportunity',
-          severity,
-          title: `${recommendation.action.toLowerCase()} pricing opportunity`,
-          message: recommendation.explanation,
-          resolved: false
-        }
+      alertsToUpsert.push({
+        hotelId,
+        recommendationId: recommendation.id,
+        date: recommendation.date,
+        type: 'pricing-opportunity',
+        severity,
+        title: `${recommendation.action.toLowerCase()} pricing opportunity`,
+        message: recommendation.explanation,
+        resolved: false
       });
     }
+
+    await this.resolveAlertsByDates(hotelId, 'pricing-opportunity', datesToResolve);
+    await this.upsertAlerts(alertsToUpsert);
   }
 
   async syncOccupancyAlerts(hotelId: number, startDate: Date, endDate: Date): Promise<void> {
@@ -73,6 +56,9 @@ export class AlertsService {
       }
     });
 
+    const alertsToUpsert: AlertUpsertInput[] = [];
+    const datesToResolve: Date[] = [];
+
     for (const metric of metrics) {
       const occupancy = Number(metric.occupancy ?? 0);
       const occupancyText = occupancy.toFixed(1);
@@ -82,30 +68,15 @@ export class AlertsService {
           occupancy >= settings.highOccupancyThreshold + 10
             ? AlertSeverity.HIGH
             : AlertSeverity.MEDIUM;
-        await this.prisma.alerts.upsert({
-          where: {
-            hotelId_date_type: {
-              hotelId,
-              date: metric.date,
-              type: 'occupancy'
-            }
-          },
-          update: {
-            recommendationId: null,
-            severity,
-            title: 'High occupancy detected',
-            message: `Occupancy at ${occupancyText}% is above threshold ${settings.highOccupancyThreshold.toFixed(1)}%.`,
-            resolved: false
-          },
-          create: {
-            hotelId,
-            date: metric.date,
-            type: 'occupancy',
-            severity,
-            title: 'High occupancy detected',
-            message: `Occupancy at ${occupancyText}% is above threshold ${settings.highOccupancyThreshold.toFixed(1)}%.`,
-            resolved: false
-          }
+        alertsToUpsert.push({
+          hotelId,
+          recommendationId: null,
+          date: metric.date,
+          type: 'occupancy',
+          severity,
+          title: 'High occupancy detected',
+          message: `Occupancy at ${occupancyText}% is above threshold ${settings.highOccupancyThreshold.toFixed(1)}%.`,
+          resolved: false
         });
         continue;
       }
@@ -115,43 +86,24 @@ export class AlertsService {
           occupancy <= settings.lowOccupancyThreshold - 10
             ? AlertSeverity.HIGH
             : AlertSeverity.MEDIUM;
-        await this.prisma.alerts.upsert({
-          where: {
-            hotelId_date_type: {
-              hotelId,
-              date: metric.date,
-              type: 'occupancy'
-            }
-          },
-          update: {
-            recommendationId: null,
-            severity,
-            title: 'Low occupancy detected',
-            message: `Occupancy at ${occupancyText}% is below threshold ${settings.lowOccupancyThreshold.toFixed(1)}%.`,
-            resolved: false
-          },
-          create: {
-            hotelId,
-            date: metric.date,
-            type: 'occupancy',
-            severity,
-            title: 'Low occupancy detected',
-            message: `Occupancy at ${occupancyText}% is below threshold ${settings.lowOccupancyThreshold.toFixed(1)}%.`,
-            resolved: false
-          }
+        alertsToUpsert.push({
+          hotelId,
+          recommendationId: null,
+          date: metric.date,
+          type: 'occupancy',
+          severity,
+          title: 'Low occupancy detected',
+          message: `Occupancy at ${occupancyText}% is below threshold ${settings.lowOccupancyThreshold.toFixed(1)}%.`,
+          resolved: false
         });
         continue;
       }
 
-      await this.prisma.alerts.updateMany({
-        where: {
-          hotelId,
-          date: metric.date,
-          type: 'occupancy'
-        },
-        data: { resolved: true }
-      });
+      datesToResolve.push(metric.date);
     }
+
+    await this.resolveAlertsByDates(hotelId, 'occupancy', datesToResolve);
+    await this.upsertAlerts(alertsToUpsert);
   }
 
   async syncCompetitiveSetAlerts(hotelId: number, startDate: Date, endDate: Date): Promise<number> {
@@ -170,6 +122,8 @@ export class AlertsService {
     });
 
     let activeAlerts = 0;
+    const alertsToUpsert: AlertUpsertInput[] = [];
+    const datesToResolve: Date[] = [];
 
     for (const rate of marketRates) {
       const yourPrice = Number(rate.yourPrice ?? 0);
@@ -181,14 +135,7 @@ export class AlertsService {
       const marketAverage = Number(rate.marketAverage ?? 0) || competitorAverage;
 
       if (!(yourPrice > 0) || !(marketAverage > 0)) {
-        await this.prisma.alerts.updateMany({
-          where: {
-            hotelId,
-            date: rate.date,
-            type: 'competitive-set'
-          },
-          data: { resolved: true }
-        });
+        datesToResolve.push(rate.date);
         continue;
       }
 
@@ -196,14 +143,7 @@ export class AlertsService {
       const absDiff = Math.abs(diffPct);
 
       if (absDiff === 0) {
-        await this.prisma.alerts.updateMany({
-          where: {
-            hotelId,
-            date: rate.date,
-            type: 'competitive-set'
-          },
-          data: { resolved: true }
-        });
+        datesToResolve.push(rate.date);
         continue;
       }
 
@@ -219,33 +159,21 @@ export class AlertsService {
         ? `Your price (${yourPrice.toFixed(2)}) is ${absDiff.toFixed(1)}% above comp set average (${marketAverage.toFixed(2)}). Threshold for medium severity is ${settings.significantDiffPct.toFixed(1)}%.`
         : `Your price (${yourPrice.toFixed(2)}) is ${absDiff.toFixed(1)}% below comp set average (${marketAverage.toFixed(2)}). Threshold for medium severity is ${settings.significantDiffPct.toFixed(1)}%.`;
 
-      await this.prisma.alerts.upsert({
-        where: {
-          hotelId_date_type: {
-            hotelId,
-            date: rate.date,
-            type: 'competitive-set'
-          }
-        },
-        update: {
-          recommendationId: null,
-          severity,
-          title,
-          message,
-          resolved: false
-        },
-        create: {
-          hotelId,
-          date: rate.date,
-          type: 'competitive-set',
-          severity,
-          title,
-          message,
-          resolved: false
-        }
+      alertsToUpsert.push({
+        hotelId,
+        recommendationId: null,
+        date: rate.date,
+        type: 'competitive-set',
+        severity,
+        title,
+        message,
+        resolved: false
       });
       activeAlerts += 1;
     }
+
+    await this.resolveAlertsByDates(hotelId, 'competitive-set', datesToResolve);
+    await this.upsertAlerts(alertsToUpsert);
 
     return activeAlerts;
   }
@@ -332,4 +260,98 @@ export class AlertsService {
 
     return values.reduce((sum, value) => sum + value, 0) / values.length;
   }
+
+  private async resolveAlertsByDates(hotelId: number, type: string, dates: Date[]): Promise<void> {
+    if (dates.length === 0) {
+      return;
+    }
+
+    await this.prisma.alerts.updateMany({
+      where: {
+        hotelId,
+        date: {
+          in: dates
+        },
+        type
+      },
+      data: { resolved: true }
+    });
+  }
+
+  private async upsertAlerts(alerts: AlertUpsertInput[]): Promise<void> {
+    if (alerts.length === 0) {
+      return;
+    }
+
+    if (typeof (this.prisma as any).$executeRaw === 'function') {
+      const values = Prisma.join(
+        alerts.map(
+          (alert) =>
+            Prisma.sql`(
+            ${alert.hotelId},
+            ${alert.recommendationId},
+            ${alert.date},
+            ${alert.type},
+            ${alert.severity}::"AlertSeverity",
+            ${alert.title},
+            ${alert.message},
+            ${alert.resolved}
+          )`
+        )
+      );
+
+      await this.prisma.$executeRaw`
+        INSERT INTO "Alerts" (
+          "hotelId",
+          "recommendationId",
+          "date",
+          "type",
+          "severity",
+          "title",
+          "message",
+          "resolved"
+        )
+        VALUES ${values}
+        ON CONFLICT ("hotelId", "date", "type") DO UPDATE SET
+          "recommendationId" = EXCLUDED."recommendationId",
+          "severity" = EXCLUDED."severity",
+          "title" = EXCLUDED."title",
+          "message" = EXCLUDED."message",
+          "resolved" = EXCLUDED."resolved",
+          "updatedAt" = NOW()
+      `;
+      return;
+    }
+
+    for (const alert of alerts) {
+      await this.prisma.alerts.upsert({
+        where: {
+          hotelId_date_type: {
+            hotelId: alert.hotelId,
+            date: alert.date,
+            type: alert.type
+          }
+        },
+        update: {
+          recommendationId: alert.recommendationId,
+          severity: alert.severity,
+          title: alert.title,
+          message: alert.message,
+          resolved: alert.resolved
+        },
+        create: alert
+      });
+    }
+  }
+}
+
+interface AlertUpsertInput {
+  hotelId: number;
+  recommendationId: number | null;
+  date: Date;
+  type: string;
+  severity: AlertSeverity;
+  title: string;
+  message: string;
+  resolved: boolean;
 }

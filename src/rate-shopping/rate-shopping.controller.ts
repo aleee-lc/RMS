@@ -1,4 +1,6 @@
 import { BadRequestException, Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { AuthenticatedUser } from '../auth/auth.types';
+import { CurrentUser } from '../auth/current-user.decorator';
 import { HotelContextService } from '../common/hotel-context.service';
 import { parseIsoDate } from '../common/utils/date.util';
 import { RateShopSnapshotsQueryDto } from './dto/rate-shop-snapshots-query.dto';
@@ -13,7 +15,7 @@ export class RateShoppingController {
   ) {}
 
   @Post('run')
-  async run(@Body() body: RunRateShoppingDto) {
+  async run(@Body() body: RunRateShoppingDto, @CurrentUser() user: AuthenticatedUser) {
     const checkInDate = parseIsoDate(body.checkInDate);
     const checkOutDate = parseIsoDate(body.checkOutDate);
 
@@ -24,7 +26,7 @@ export class RateShoppingController {
       throw new BadRequestException('checkOutDate must be greater than checkInDate.');
     }
 
-    const hotel = await this.hotelContextService.resolveHotel(body.hotelId);
+    const hotel = await this.hotelContextService.resolveHotelForUser(user, body.hotelId);
 
     const result = await this.rateShoppingService.runForHotel({
       hotelId: hotel.id,
@@ -43,8 +45,11 @@ export class RateShoppingController {
   }
 
   @Get('snapshots')
-  async getSnapshots(@Query() query: RateShopSnapshotsQueryDto) {
-    const hotel = await this.hotelContextService.resolveHotel(query.hotelId);
+  async getSnapshots(
+    @Query() query: RateShopSnapshotsQueryDto,
+    @CurrentUser() user: AuthenticatedUser
+  ) {
+    const hotel = await this.hotelContextService.resolveHotelForUser(user, query.hotelId);
 
     const startDate = parseIsoDate(query.startDate);
     const endDate = parseIsoDate(query.endDate);

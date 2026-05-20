@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { PrismaClient, RecommendationAction, AlertSeverity } from '@prisma/client';
+import { hashPassword } from '../src/auth/password.util';
 
 const prisma = new PrismaClient();
 
@@ -25,6 +26,35 @@ async function main() {
       totalRooms,
       currency: 'MXN',
       timezone: 'America/Chihuahua'
+    }
+  });
+
+  const adminEmail = (process.env.SEED_ADMIN_EMAIL ?? 'admin@revsight.local').trim().toLowerCase();
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? 'ChangeMe123!';
+  const admin = await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: {
+      name: process.env.SEED_ADMIN_NAME ?? 'RevSight Admin',
+      role: 'ADMIN',
+      active: true
+    },
+    create: {
+      email: adminEmail,
+      name: process.env.SEED_ADMIN_NAME ?? 'RevSight Admin',
+      passwordHash: hashPassword(adminPassword),
+      role: 'ADMIN',
+      active: true
+    }
+  });
+
+  await prisma.hotelMembership.upsert({
+    where: { userId_hotelId: { userId: admin.id, hotelId: hotel.id } },
+    update: { role: 'OWNER', isDefault: true },
+    create: {
+      userId: admin.id,
+      hotelId: hotel.id,
+      role: 'OWNER',
+      isDefault: true
     }
   });
 
@@ -174,7 +204,7 @@ async function main() {
     }
   }
 
-  console.log(`Seed complete for hotel ${hotel.name} (id=${hotel.id})`);
+  console.log(`Seed complete for hotel ${hotel.name} (id=${hotel.id}) and admin ${admin.email}`);
 }
 
 main()

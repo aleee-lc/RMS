@@ -1,30 +1,50 @@
-<div class="app-shell">
-  <aside class="sidebar">
-    <div class="brand">
-      <img class="brand-logo" src="/revsight-logo.svg" alt="RevSight" />
-      <div class="brand-copy">
-        <strong>Command Center</strong>
-        <small>Revenue Management BI</small>
+<ng-container *ngIf="showShell(); else publicRoute">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <img class="brand-logo" src="/revsight-logo.svg" alt="RevSight" />
+        <div class="brand-copy">
+          <strong>Command Center</strong>
+          <small>{{ user()?.name ?? 'Revenue Management BI' }}</small>
+        </div>
       </div>
-    </div>
 
-    <nav class="side-nav" aria-label="Navegacion principal">
-      <section class="nav-group" *ngFor="let group of navGroups">
-        <h2>{{ group.label }}</h2>
-        <a
-          *ngFor="let item of group.items"
-          [routerLink]="item.path"
-          routerLinkActive="active-link"
-          [routerLinkActiveOptions]="{ exact: item.path === '/dashboard' }"
-        >
-          <mat-icon>{{ item.icon }}</mat-icon>
-          <span>{{ item.label }}</span>
-        </a>
-      </section>
-    </nav>
-  </aside>
+      <mat-form-field class="hotel-select" appearance="outline" *ngIf="hotels().length">
+        <mat-label>Propiedad</mat-label>
+        <mat-select [value]="selectedHotelId()" (selectionChange)="onHotelChanged($event.value)">
+          <mat-option *ngFor="let hotel of hotels()" [value]="hotel.id">
+            {{ hotel.name }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
 
-  <main class="content" role="main">
-    <router-outlet />
-  </main>
-</div>
+      <nav class="side-nav" aria-label="Navegacion principal">
+        <section class="nav-group" *ngFor="let group of navGroups">
+          <h2>{{ group.label }}</h2>
+          <a
+            *ngFor="let item of group.items"
+            [routerLink]="item.path"
+            routerLinkActive="active-link"
+            [routerLinkActiveOptions]="{ exact: item.path === '/dashboard' }"
+          >
+            <mat-icon>{{ item.icon }}</mat-icon>
+            <span>{{ item.label }}</span>
+          </a>
+        </section>
+      </nav>
+
+      <button mat-stroked-button class="logout-button" (click)="onLogout()">
+        <mat-icon>logout</mat-icon>
+        Salir
+      </button>
+    </aside>
+
+    <main class="content" role="main">
+      <router-outlet />
+    </main>
+  </div>
+</ng-container>
+
+<ng-template #publicRoute>
+  <router-outlet />
+</ng-template>

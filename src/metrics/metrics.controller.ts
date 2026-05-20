@@ -1,4 +1,6 @@
 import { Controller, Get, Query } from '@nestjs/common';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { AuthenticatedUser } from '../auth/auth.types';
 import { DateRangeQueryDto } from '../common/dto/date-range-query.dto';
 import { HotelContextService } from '../common/hotel-context.service';
 import { parseIsoDate, toUtcDateOnly } from '../common/utils/date.util';
@@ -13,8 +15,8 @@ export class MetricsController {
   ) {}
 
   @Get()
-  async getMetrics(@Query() query: DateRangeQueryDto) {
-    const hotel = await this.hotelContextService.resolveHotel(query.hotelId);
+  async getMetrics(@Query() query: DateRangeQueryDto, @CurrentUser() user: AuthenticatedUser) {
+    const hotel = await this.hotelContextService.resolveHotelForUser(user, query.hotelId);
 
     const endDate = parseIsoDate(query.endDate) ?? toUtcDateOnly(new Date());
     const startDate =

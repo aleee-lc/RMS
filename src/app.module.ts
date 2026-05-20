@@ -12,12 +12,14 @@ import { HotelsModule } from './hotels/hotels.module';
 import { CompetitorsModule } from './competitors/competitors.module';
 import { RateShoppingModule } from './rate-shopping/rate-shopping.module';
 import { BiModule } from './bi/bi.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
     CommonModule,
+    AuthModule,
     IngestionModule,
     MetricsModule,
     MarketModule,

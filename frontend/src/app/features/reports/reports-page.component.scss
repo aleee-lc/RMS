@@ -113,6 +113,39 @@
   margin-bottom: var(--space-3);
 }
 
+.chart-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.chart-panel {
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  padding: var(--space-3);
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.chart-copy h2 {
+  font-size: 0.98rem;
+  margin: 0 0 0.2rem;
+}
+
+.chart-copy p {
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  margin: 0;
+}
+
+.chart-wrap {
+  height: 300px;
+  min-width: 0;
+}
+
 .table-section {
   display: grid;
   gap: var(--space-2);
@@ -193,5 +226,41 @@
 
   .parameter-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  .page-header .inline-actions,
+  app-date-range-filter,
+  mat-progress-bar,
+  .parameter-grid,
+  .report-hub,
+  .table-actions {
+    display: none !important;
+  }
+
+  .section-card,
+  .chart-panel,
+  .table-wrap {
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+
+  .chart-section {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-wrap {
+    height: 260px;
+  }
+
+  .report-table {
+    min-width: 0;
+  }
+
+  .report-table th,
+  .report-table td {
+    white-space: normal;
+    font-size: 0.72rem;
   }
 }

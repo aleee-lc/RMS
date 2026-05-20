@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { RecommendationAction, Recommendations } from '@prisma/client';
+import { Prisma, RecommendationAction, Recommendations } from '@prisma/client';
 import { AlertsService } from '../alerts/alerts.service';
 import { dateKey, enumerateDateRange, toUtcDateOnly } from '../common/utils/date.util';
 import { clamp, round2 } from '../common/utils/number.util';
@@ -26,7 +26,11 @@ export class RecommendationService {
     private readonly alertsService: AlertsService
   ) {}
 
-  async getRecommendations(hotelId: number, startDate: Date, endDate: Date): Promise<Recommendations[]> {
+  async getRecommendations(
+    hotelId: number,
+    startDate: Date,
+    endDate: Date
+  ): Promise<Recommendations[]> {
     return this.prisma.recommendations.findMany({
       where: {
         hotelId,
@@ -76,7 +80,7 @@ export class RecommendationService {
     const metricByDate = new Map(metrics.map((m) => [dateKey(m.date), m]));
     const marketByDate = new Map(marketRates.map((m) => [dateKey(m.date), m]));
 
-    const output: Recommendations[] = [];
+    const recommendationInputs: Omit<Recommendations, 'id' | 'createdAt' | 'updatedAt'>[] = [];
 
     for (const date of enumerateDateRange(normalizedStart, normalizedEnd)) {
       const key = dateKey(date);
@@ -126,9 +130,7 @@ export class RecommendationService {
         -(config.maxAdjustmentPct / 100),
         config.maxAdjustmentPct / 100
       );
-      let suggestedPrice = round2(
-        basePrice * (1 + adjustmentFactor)
-      );
+      let suggestedPrice = round2(basePrice * (1 + adjustmentFactor));
 
       const minimumStepFactor = config.minActionStepPct / 100;
       if (action === RecommendationAction.INCREASE && suggestedPrice <= basePrice) {
@@ -149,45 +151,111 @@ export class RecommendationService {
         hasDemandSignal
       });
 
-      const recommendation = await this.prisma.recommendations.upsert({
-        where: {
-          hotelId_date: {
-            hotelId,
-            date
-          }
-        },
-        update: {
-          marketRateId: market?.id,
-          action,
-          suggestedPrice,
-          explanation,
-          occupancy: hasDemandSignal ? round2(occupancy) : null,
-          yourPrice: round2(yourPrice),
-          marketAverage: round2(marketAverage),
-          priceDiffPct: round2(priceDiffPct),
-          demandFactor: round2(demandFactor)
-        },
-        create: {
-          hotelId,
-          marketRateId: market?.id,
-          date,
-          action,
-          suggestedPrice,
-          explanation,
-          occupancy: hasDemandSignal ? round2(occupancy) : null,
-          yourPrice: round2(yourPrice),
-          marketAverage: round2(marketAverage),
-          priceDiffPct: round2(priceDiffPct),
-          demandFactor: round2(demandFactor)
-        }
+      recommendationInputs.push({
+        hotelId,
+        marketRateId: market?.id ?? null,
+        date,
+        action,
+        suggestedPrice: suggestedPrice as any,
+        explanation,
+        occupancy: (hasDemandSignal ? round2(occupancy) : null) as any,
+        yourPrice: round2(yourPrice) as any,
+        marketAverage: round2(marketAverage) as any,
+        priceDiffPct: round2(priceDiffPct) as any,
+        demandFactor: round2(demandFactor) as any
       });
-
-      output.push(recommendation);
     }
 
+    const output = await this.upsertRecommendations(recommendationInputs);
     await this.alertsService.syncFromRecommendations(hotelId, output);
 
     return output.sort((a, b) => a.date.getTime() - b.date.getTime());
+  }
+
+  private async upsertRecommendations(
+    recommendations: Omit<Recommendations, 'id' | 'createdAt' | 'updatedAt'>[]
+  ): Promise<Recommendations[]> {
+    if (recommendations.length === 0) {
+      return [];
+    }
+
+    if (typeof (this.prisma as any).$queryRaw === 'function') {
+      const values = Prisma.join(
+        recommendations.map(
+          (recommendation) =>
+            Prisma.sql`(
+            ${recommendation.hotelId},
+            ${recommendation.marketRateId},
+            ${recommendation.date},
+            ${recommendation.action}::"RecommendationAction",
+            ${recommendation.suggestedPrice},
+            ${recommendation.explanation},
+            ${recommendation.occupancy},
+            ${recommendation.yourPrice},
+            ${recommendation.marketAverage},
+            ${recommendation.priceDiffPct},
+            ${recommendation.demandFactor}
+          )`
+        )
+      );
+
+      return this.prisma.$queryRaw<Recommendations[]>`
+        INSERT INTO "Recommendations" (
+          "hotelId",
+          "marketRateId",
+          "date",
+          "action",
+          "suggestedPrice",
+          "explanation",
+          "occupancy",
+          "yourPrice",
+          "marketAverage",
+          "priceDiffPct",
+          "demandFactor"
+        )
+        VALUES ${values}
+        ON CONFLICT ("hotelId", "date") DO UPDATE SET
+          "marketRateId" = EXCLUDED."marketRateId",
+          "action" = EXCLUDED."action",
+          "suggestedPrice" = EXCLUDED."suggestedPrice",
+          "explanation" = EXCLUDED."explanation",
+          "occupancy" = EXCLUDED."occupancy",
+          "yourPrice" = EXCLUDED."yourPrice",
+          "marketAverage" = EXCLUDED."marketAverage",
+          "priceDiffPct" = EXCLUDED."priceDiffPct",
+          "demandFactor" = EXCLUDED."demandFactor",
+          "updatedAt" = NOW()
+        RETURNING *
+      `;
+    }
+
+    const output: Recommendations[] = [];
+    for (const recommendation of recommendations) {
+      output.push(
+        await this.prisma.recommendations.upsert({
+          where: {
+            hotelId_date: {
+              hotelId: recommendation.hotelId,
+              date: recommendation.date
+            }
+          },
+          update: {
+            marketRateId: recommendation.marketRateId,
+            action: recommendation.action,
+            suggestedPrice: recommendation.suggestedPrice,
+            explanation: recommendation.explanation,
+            occupancy: recommendation.occupancy,
+            yourPrice: recommendation.yourPrice,
+            marketAverage: recommendation.marketAverage,
+            priceDiffPct: recommendation.priceDiffPct,
+            demandFactor: recommendation.demandFactor
+          },
+          create: recommendation
+        })
+      );
+    }
+
+    return output;
   }
 
   private buildExplanation(input: {

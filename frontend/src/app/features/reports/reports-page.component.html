@@ -127,6 +127,11 @@
       </ng-template>
 
       <div class="inline-actions table-actions">
+        <button mat-stroked-button (click)="onPrintReport()" [disabled]="!selectedReportData()">
+          <mat-icon>print</mat-icon>
+          Imprimir reporte
+        </button>
+
         <button
           mat-stroked-button
           color="primary"
@@ -146,6 +151,24 @@
           Exportar CSV secundario
         </button>
       </div>
+
+      <section class="chart-section" *ngIf="selectedReportView().charts.length">
+        <article class="chart-panel" *ngFor="let chart of selectedReportView().charts">
+          <div class="chart-copy">
+            <h2>{{ chart.title }}</h2>
+            <p>{{ chart.subtitle }}</p>
+          </div>
+
+          <div class="chart-wrap">
+            <canvas
+              baseChart
+              [type]="chart.type"
+              [data]="$any(chart.data)"
+              [options]="$any(chart.options)"
+            ></canvas>
+          </div>
+        </article>
+      </section>
 
       <section class="table-section" *ngIf="selectedReportView().primaryTable as table">
         <h2>{{ table.title }}</h2>

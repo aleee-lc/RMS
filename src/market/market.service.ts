@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { Competitor, Prisma } from '@prisma/client';
 import ExcelJS from 'exceljs';
 import { PrismaService } from '../prisma/prisma.service';
 import { dateKey, toUtcDateOnly } from '../common/utils/date.util';
@@ -8,6 +9,14 @@ interface ParsedPriceRow {
   rowIndex: number;
   label: string;
   valuesByColumn: Map<number, number>;
+}
+
+interface MarketRateLookupRow {
+  id: number;
+  hotelId: number;
+  date: Date;
+  yourPrice: Prisma.Decimal | number | null;
+  marketAverage: Prisma.Decimal | number | null;
 }
 
 @Injectable()
@@ -71,22 +80,9 @@ export class MarketService {
       return true;
     });
 
-    const competitors = await Promise.all(
-      competitorRows.map((competitor) =>
-        this.prisma.competitor.upsert({
-          where: {
-            hotelId_name: {
-              hotelId,
-              name: competitor.label
-            }
-          },
-          update: {},
-          create: {
-            hotelId,
-            name: competitor.label
-          }
-        })
-      )
+    const competitors = await this.upsertCompetitors(
+      hotelId,
+      competitorRows.map((competitor) => competitor.label)
     );
 
     const competitorMap = new Map<string, number>(
@@ -134,30 +130,7 @@ export class MarketService {
         } => input !== null
       );
 
-    const marketRates = await Promise.all(
-      marketRateInputs.map((input) =>
-        this.prisma.marketRates.upsert({
-          where: {
-            hotelId_date: {
-              hotelId,
-              date: input.date
-            }
-          },
-          update: {
-            yourPrice: input.yourPrice,
-            marketAverage: input.marketAverage,
-            sourceFile: fileName
-          },
-          create: {
-            hotelId,
-            date: input.date,
-            yourPrice: input.yourPrice,
-            marketAverage: input.marketAverage,
-            sourceFile: fileName
-          }
-        })
-      )
-    );
+    const marketRates = await this.upsertMarketRates(hotelId, fileName, marketRateInputs);
 
     const marketRateIdsByDate = new Map(
       marketRates.map((marketRate) => [dateKey(marketRate.date), marketRate.id])
@@ -378,6 +351,116 @@ export class MarketService {
     }
 
     return rows.find((row) => /competitive\s*set\s*average(?:\s*rates)?/i.test(row.label)) ?? null;
+  }
+
+  private async upsertCompetitors(hotelId: number, names: string[]): Promise<Competitor[]> {
+    const uniqueNames = [...new Set(names)];
+    const competitorDelegate = this.prisma.competitor as any;
+
+    if (
+      typeof competitorDelegate.createMany === 'function' &&
+      typeof competitorDelegate.findMany === 'function'
+    ) {
+      await competitorDelegate.createMany({
+        data: uniqueNames.map((name) => ({ hotelId, name })),
+        skipDuplicates: true
+      });
+
+      return competitorDelegate.findMany({
+        where: {
+          hotelId,
+          name: {
+            in: uniqueNames
+          }
+        }
+      });
+    }
+
+    return Promise.all(
+      uniqueNames.map((name) =>
+        this.prisma.competitor.upsert({
+          where: {
+            hotelId_name: {
+              hotelId,
+              name
+            }
+          },
+          update: {},
+          create: {
+            hotelId,
+            name
+          }
+        })
+      )
+    );
+  }
+
+  private async upsertMarketRates(
+    hotelId: number,
+    fileName: string,
+    marketRateInputs: {
+      columnIndex: number;
+      date: Date;
+      yourPrice: number | null;
+      marketAverage: number | null;
+    }[]
+  ): Promise<MarketRateLookupRow[]> {
+    if (marketRateInputs.length === 0) {
+      return [];
+    }
+
+    if (typeof (this.prisma as any).$queryRaw === 'function') {
+      const values = Prisma.join(
+        marketRateInputs.map(
+          (input) =>
+            Prisma.sql`(${hotelId}, ${input.date}, ${input.yourPrice}, ${input.marketAverage}, ${fileName})`
+        )
+      );
+
+      return this.prisma.$queryRaw<
+        {
+          id: number;
+          hotelId: number;
+          date: Date;
+          yourPrice: Prisma.Decimal | number | null;
+          marketAverage: Prisma.Decimal | number | null;
+        }[]
+      >`
+        INSERT INTO "MarketRates" ("hotelId", "date", "yourPrice", "marketAverage", "sourceFile")
+        VALUES ${values}
+        ON CONFLICT ("hotelId", "date") DO UPDATE SET
+          "yourPrice" = EXCLUDED."yourPrice",
+          "marketAverage" = EXCLUDED."marketAverage",
+          "sourceFile" = EXCLUDED."sourceFile",
+          "updatedAt" = NOW()
+        RETURNING "id", "hotelId", "date", "yourPrice", "marketAverage"
+      `;
+    }
+
+    return Promise.all(
+      marketRateInputs.map((input) =>
+        this.prisma.marketRates.upsert({
+          where: {
+            hotelId_date: {
+              hotelId,
+              date: input.date
+            }
+          },
+          update: {
+            yourPrice: input.yourPrice,
+            marketAverage: input.marketAverage,
+            sourceFile: fileName
+          },
+          create: {
+            hotelId,
+            date: input.date,
+            yourPrice: input.yourPrice,
+            marketAverage: input.marketAverage,
+            sourceFile: fileName
+          }
+        })
+      )
+    );
   }
 
   private parseMonthAndDay(monthLabel: string, day: number): Date | null {

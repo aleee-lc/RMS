@@ -1,4 +1,6 @@
 import { Controller, Get, Query } from '@nestjs/common';
+import { AuthenticatedUser } from '../auth/auth.types';
+import { CurrentUser } from '../auth/current-user.decorator';
 import { HotelContextService } from '../common/hotel-context.service';
 import { parseIsoDate } from '../common/utils/date.util';
 import { CrsReconciliationQueryDto } from './dto/crs-reconciliation-query.dto';
@@ -15,8 +17,11 @@ export class ReportsController {
   ) {}
 
   @Get('pickup')
-  async getPickupReport(@Query() query: PickupReportQueryDto) {
-    const hotel = await this.hotelContextService.resolveHotel(query.hotelId);
+  async getPickupReport(
+    @Query() query: PickupReportQueryDto,
+    @CurrentUser() user: AuthenticatedUser
+  ) {
+    const hotel = await this.hotelContextService.resolveHotelForUser(user, query.hotelId);
 
     const defaultBooking = this.reportsService.defaultPastRange(6);
     const defaultStay = this.reportsService.defaultFutureRange(120);
@@ -40,8 +45,11 @@ export class ReportsController {
   }
 
   @Get('forecast-variance')
-  async getForecastVarianceReport(@Query() query: ReportDateRangeQueryDto) {
-    const hotel = await this.hotelContextService.resolveHotel(query.hotelId);
+  async getForecastVarianceReport(
+    @Query() query: ReportDateRangeQueryDto,
+    @CurrentUser() user: AuthenticatedUser
+  ) {
+    const hotel = await this.hotelContextService.resolveHotelForUser(user, query.hotelId);
     const defaultRange = this.reportsService.defaultFutureRange(90);
     const range = {
       startDate: parseIsoDate(query.startDate) ?? defaultRange.startDate,
@@ -57,8 +65,11 @@ export class ReportsController {
   }
 
   @Get('market-position')
-  async getMarketPositionReport(@Query() query: ReportDateRangeQueryDto) {
-    const hotel = await this.hotelContextService.resolveHotel(query.hotelId);
+  async getMarketPositionReport(
+    @Query() query: ReportDateRangeQueryDto,
+    @CurrentUser() user: AuthenticatedUser
+  ) {
+    const hotel = await this.hotelContextService.resolveHotelForUser(user, query.hotelId);
     const defaultRange = this.reportsService.defaultFutureRange(90);
     const range = {
       startDate: parseIsoDate(query.startDate) ?? defaultRange.startDate,
@@ -74,8 +85,11 @@ export class ReportsController {
   }
 
   @Get('recommendation-compliance')
-  async getRecommendationComplianceReport(@Query() query: RecommendationComplianceQueryDto) {
-    const hotel = await this.hotelContextService.resolveHotel(query.hotelId);
+  async getRecommendationComplianceReport(
+    @Query() query: RecommendationComplianceQueryDto,
+    @CurrentUser() user: AuthenticatedUser
+  ) {
+    const hotel = await this.hotelContextService.resolveHotelForUser(user, query.hotelId);
     const defaultRange = this.reportsService.defaultFutureRange(60);
     const range = {
       startDate: parseIsoDate(query.startDate) ?? defaultRange.startDate,
@@ -96,8 +110,11 @@ export class ReportsController {
   }
 
   @Get('revenue-opportunity')
-  async getRevenueOpportunityReport(@Query() query: ReportDateRangeQueryDto) {
-    const hotel = await this.hotelContextService.resolveHotel(query.hotelId);
+  async getRevenueOpportunityReport(
+    @Query() query: ReportDateRangeQueryDto,
+    @CurrentUser() user: AuthenticatedUser
+  ) {
+    const hotel = await this.hotelContextService.resolveHotelForUser(user, query.hotelId);
     const defaultRange = this.reportsService.defaultFutureRange(60);
     const range = {
       startDate: parseIsoDate(query.startDate) ?? defaultRange.startDate,
@@ -113,8 +130,11 @@ export class ReportsController {
   }
 
   @Get('executive-summary')
-  async getExecutiveSummaryReport(@Query() query: ReportDateRangeQueryDto) {
-    const hotel = await this.hotelContextService.resolveHotel(query.hotelId);
+  async getExecutiveSummaryReport(
+    @Query() query: ReportDateRangeQueryDto,
+    @CurrentUser() user: AuthenticatedUser
+  ) {
+    const hotel = await this.hotelContextService.resolveHotelForUser(user, query.hotelId);
     const defaultRange = this.reportsService.defaultFutureRange(60);
     const range = {
       startDate: parseIsoDate(query.startDate) ?? defaultRange.startDate,
@@ -130,8 +150,11 @@ export class ReportsController {
   }
 
   @Get('crs-reconciliation')
-  async getCrsReconciliationReport(@Query() query: CrsReconciliationQueryDto) {
-    const hotel = await this.hotelContextService.resolveHotel(query.hotelId);
+  async getCrsReconciliationReport(
+    @Query() query: CrsReconciliationQueryDto,
+    @CurrentUser() user: AuthenticatedUser
+  ) {
+    const hotel = await this.hotelContextService.resolveHotelForUser(user, query.hotelId);
     const report = await this.reportsService.getCrsReconciliationReport(hotel.id, {
       startDate: parseIsoDate(query.startDate) ?? undefined,
       endDate: parseIsoDate(query.endDate) ?? undefined,

@@ -8,7 +8,14 @@ describe('RecommendationController', () => {
   } as any;
 
   const hotelContextService = {
-    resolveHotel: jest.fn()
+    resolveHotelForUser: jest.fn()
+  } as any;
+
+  const user = {
+    id: 1,
+    email: 'admin@revsight.local',
+    name: 'Admin',
+    role: 'ADMIN'
   } as any;
 
   let controller: RecommendationController;
@@ -16,7 +23,7 @@ describe('RecommendationController', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     controller = new RecommendationController(recommendationService, hotelContextService);
-    hotelContextService.resolveHotel.mockResolvedValue({
+    hotelContextService.resolveHotelForUser.mockResolvedValue({
       id: 1,
       name: 'Hotel',
       totalRooms: 100
@@ -38,11 +45,14 @@ describe('RecommendationController', () => {
       }
     ]);
 
-    const result = await controller.getRecommendations({
-      hotelId: 1,
-      startDate: '2026-04-24',
-      endDate: '2026-04-24'
-    });
+    const result = await controller.getRecommendations(
+      {
+        hotelId: 1,
+        startDate: '2026-04-24',
+        endDate: '2026-04-24'
+      },
+      user
+    );
 
     expect(recommendationService.getRecommendations).toHaveBeenCalledTimes(1);
     expect(recommendationService.generateAndPersistRecommendations).not.toHaveBeenCalled();
@@ -70,6 +80,7 @@ describe('RecommendationController', () => {
         startDate: '2026-04-24',
         endDate: '2026-04-24'
       },
+      user,
       {
         highOccupancyThreshold: 75,
         significantDiffPct: 8

@@ -15,7 +15,7 @@
   border-right: 1px solid var(--line-soft);
   display: grid;
   gap: 14px;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto 1fr auto;
   height: 100vh;
   padding: 18px 14px;
   position: sticky;
@@ -50,6 +50,14 @@
 .brand-copy small {
   color: var(--text-soft);
   font-size: 0.72rem;
+}
+
+.hotel-select {
+  width: 100%;
+}
+
+.logout-button {
+  justify-content: flex-start;
 }
 
 .side-nav {

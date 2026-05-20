@@ -7,7 +7,14 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
 
   app.enableCors({
-    origin: ['http://localhost:4200'],
+    origin: (origin, callback) => {
+      if (!origin || isAllowedCorsOrigin(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`CORS origin not allowed: ${origin}`), false);
+    },
     credentials: true
   });
 
@@ -28,3 +35,28 @@ async function bootstrap(): Promise<void> {
 }
 
 void bootstrap();
+
+function isAllowedCorsOrigin(origin: string): boolean {
+  const configuredOrigins = (process.env.CORS_ORIGINS ?? '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  const allowedOrigins = new Set([
+    'http://localhost:4200',
+    'http://127.0.0.1:4200',
+    'https://revsight.netlify.app',
+    ...configuredOrigins
+  ]);
+
+  if (allowedOrigins.has(origin)) {
+    return true;
+  }
+
+  try {
+    const url = new URL(origin);
+    return url.protocol === 'https:' && url.hostname.endsWith('.netlify.app');
+  } catch {
+    return false;
+  }
+}

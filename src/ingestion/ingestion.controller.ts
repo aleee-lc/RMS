@@ -3,6 +3,8 @@ import {
   Controller,
   HttpCode,
   HttpStatus,
+  InternalServerErrorException,
+  Logger,
   Post,
   Query,
   UploadedFile,
@@ -18,6 +20,8 @@ import { IngestionService } from './ingestion.service';
 
 @Controller('upload')
 export class IngestionController {
+  private readonly logger = new Logger(IngestionController.name);
+
   constructor(
     private readonly ingestionService: IngestionService,
     private readonly hotelContextService: HotelContextService
@@ -51,7 +55,11 @@ export class IngestionController {
     }
 
     const hotel = await this.hotelContextService.resolveHotelForUser(user, query.hotelId);
-    const result = await this.ingestionService.ingestXml(file.buffer, file.originalname, hotel.id);
+    const result = await this.runIngestion(
+      () => this.ingestionService.ingestXml(file.buffer, file.originalname, hotel.id),
+      file.originalname,
+      hotel.id
+    );
 
     return {
       hotel,
@@ -88,8 +96,8 @@ export class IngestionController {
     }
 
     const hotel = await this.hotelContextService.resolveHotelForUser(user, query.hotelId);
-    const result = await this.ingestionService.ingestExcel(
-      file.buffer,
+    const result = await this.runIngestion(
+      () => this.ingestionService.ingestExcel(file.buffer, file.originalname, hotel.id),
       file.originalname,
       hotel.id
     );
@@ -99,5 +107,27 @@ export class IngestionController {
       source_file: file.originalname,
       ...result
     };
+  }
+
+  private async runIngestion<T>(
+    operation: () => Promise<T>,
+    fileName: string,
+    hotelId: number
+  ): Promise<T> {
+    try {
+      return await operation();
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      const message = error instanceof Error ? error.message : String(error);
+      const stack = error instanceof Error ? error.stack : undefined;
+      this.logger.error(`Upload failed for hotel=${hotelId} file=${fileName}: ${message}`, stack);
+
+      throw new InternalServerErrorException(
+        `No fue posible procesar el archivo en el backend: ${message}`
+      );
+    }
   }
 }

@@ -1,4 +1,5 @@
 ﻿import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
@@ -163,10 +164,8 @@ export class UploadPageComponent {
         this.lastResult.set(result);
         this.snackBar.open('Carga completada con exito.', 'Cerrar', { duration: 2600 });
       },
-      error: () => {
-        this.errorMessage.set(
-          'No fue posible procesar el archivo. Revisa formato y vuelve a intentar.',
-        );
+      error: (error: HttpErrorResponse) => {
+        this.errorMessage.set(this.resolveUploadError(error));
       },
     });
   }
@@ -255,5 +254,22 @@ export class UploadPageComponent {
     }
 
     return /\.(xlsx|xls)$/i.test(file.name);
+  }
+
+  private resolveUploadError(error: HttpErrorResponse): string {
+    const message = error.error?.message;
+    if (Array.isArray(message)) {
+      return message.join(' ');
+    }
+
+    if (typeof message === 'string' && message.trim()) {
+      return message;
+    }
+
+    if (typeof error.error === 'string' && error.error.trim()) {
+      return error.error;
+    }
+
+    return 'No fue posible procesar el archivo. Revisa formato y vuelve a intentar.';
   }
 }

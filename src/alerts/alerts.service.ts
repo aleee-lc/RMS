@@ -295,7 +295,8 @@ export class AlertsService {
             ${alert.severity}::"AlertSeverity",
             ${alert.title},
             ${alert.message},
-            ${alert.resolved}
+            ${alert.resolved},
+            NOW()
           )`
         )
       );
@@ -309,7 +310,8 @@ export class AlertsService {
           "severity",
           "title",
           "message",
-          "resolved"
+          "resolved",
+          "updatedAt"
         )
         VALUES ${values}
         ON CONFLICT ("hotelId", "date", "type") DO UPDATE SET

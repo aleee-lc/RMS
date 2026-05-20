@@ -53,6 +53,10 @@
   font-size: 0.72rem;
 }
 
+.mobile-menu-button {
+  display: none;
+}
+
 .hotel-select {
   width: 100%;
 }
@@ -127,21 +131,34 @@
     border-bottom: 1px solid var(--line-soft);
     border-right: 0;
     height: auto;
-    padding: 12px;
+    padding: calc(10px + env(safe-area-inset-top, 0px)) 12px 10px;
     position: sticky;
     grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-rows: auto auto auto;
+    grid-template-rows: auto;
     top: 0;
   }
 
   .brand {
     border-bottom: 0;
-    padding: 0 2px 10px;
+    padding: 0;
+  }
+
+  .mobile-menu-button {
+    align-self: center;
+    display: inline-flex;
+    justify-self: end;
+  }
+
+  .sidebar:not(.menu-open) .hotel-select,
+  .sidebar:not(.menu-open) .side-nav,
+  .sidebar:not(.menu-open) .logout-button {
+    display: none;
   }
 
   .hotel-select {
     grid-column: 1 / -1;
     max-width: none;
+    margin-top: 8px;
   }
 
   .side-nav {
@@ -150,7 +167,7 @@
     grid-column: 1 / -1;
     margin: 0 -12px;
     overflow-x: auto;
-    padding: 0 12px 4px;
+    padding: 2px 12px 4px;
     scrollbar-width: none;
   }
 
@@ -174,9 +191,10 @@
   }
 
   .logout-button {
+    grid-column: 1 / -1;
     justify-self: end;
     min-height: 40px;
-    width: auto;
+    width: 100%;
   }
 
   .content {
@@ -187,15 +205,19 @@
 @media (max-width: 560px) {
   .sidebar {
     gap: 10px;
-    padding: 10px;
+    padding: calc(10px + env(safe-area-inset-top, 0px)) 10px 10px;
   }
 
   .brand-logo {
-    width: 96px;
+    width: 118px;
   }
 
-  .brand-copy {
-    display: none;
+  .brand-copy strong {
+    font-size: 0.78rem;
+  }
+
+  .brand-copy small {
+    font-size: 0.68rem;
   }
 
   .side-nav {

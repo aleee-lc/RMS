@@ -84,6 +84,16 @@ body {
   background: var(--bg-canvas);
   min-height: 100%;
   font-size: 14px;
+  max-width: 100%;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+app-root {
+  display: block;
+  min-height: 100vh;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 h1,

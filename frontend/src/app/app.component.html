@@ -1,15 +1,19 @@
 <ng-container *ngIf="showShell(); else publicRoute">
-  <div class="app-shell">
-    <aside class="sidebar">
-      <div class="brand">
-        <img class="brand-logo" src="/revsight-logo.svg" alt="RevSight" />
-        <div class="brand-copy">
-          <strong>Command Center</strong>
-          <small>{{ user()?.name ?? 'Revenue Management BI' }}</small>
-        </div>
+<div class="app-shell">
+  <aside class="sidebar" [class.menu-open]="mobileMenuOpen()">
+    <div class="brand">
+      <img class="brand-logo" src="/revsight-logo.svg" alt="RevSight" />
+      <div class="brand-copy">
+        <strong>Command Center</strong>
+        <small>{{ user()?.name ?? 'Revenue Management BI' }}</small>
       </div>
+    </div>
 
-      <mat-form-field class="hotel-select" appearance="outline" *ngIf="hotels().length">
+    <button mat-icon-button class="mobile-menu-button" type="button" (click)="toggleMobileMenu()">
+      <mat-icon>{{ mobileMenuOpen() ? 'close' : 'menu' }}</mat-icon>
+    </button>
+
+    <mat-form-field class="hotel-select" appearance="outline" *ngIf="hotels().length">
         <mat-label>Propiedad</mat-label>
         <mat-select [value]="selectedHotelId()" (selectionChange)="onHotelChanged($event.value)">
           <mat-option *ngFor="let hotel of hotels()" [value]="hotel.id">
@@ -21,12 +25,13 @@
       <nav class="side-nav" aria-label="Navegacion principal">
         <section class="nav-group" *ngFor="let group of navGroups">
           <h2>{{ group.label }}</h2>
-          <a
-            *ngFor="let item of group.items"
-            [routerLink]="item.path"
-            routerLinkActive="active-link"
-            [routerLinkActiveOptions]="{ exact: item.path === '/dashboard' }"
-          >
+        <a
+          *ngFor="let item of group.items"
+          [routerLink]="item.path"
+          routerLinkActive="active-link"
+          [routerLinkActiveOptions]="{ exact: item.path === '/dashboard' }"
+          (click)="closeMobileMenu()"
+        >
             <mat-icon>{{ item.icon }}</mat-icon>
             <span>{{ item.label }}</span>
           </a>

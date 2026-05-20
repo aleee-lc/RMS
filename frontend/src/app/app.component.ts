@@ -28,6 +28,7 @@ export class AppComponent {
   private readonly auth = inject(AuthService);
 
   readonly showShell = signal(true);
+  readonly mobileMenuOpen = signal(false);
   readonly user = this.auth.user;
   readonly hotels = this.auth.hotels;
   readonly selectedHotelId = this.auth.selectedHotelId;
@@ -70,6 +71,14 @@ export class AppComponent {
   onHotelChanged(hotelId: number): void {
     this.auth.selectHotel(hotelId);
     window.location.reload();
+  }
+
+  toggleMobileMenu(): void {
+    this.mobileMenuOpen.update((open) => !open);
+  }
+
+  closeMobileMenu(): void {
+    this.mobileMenuOpen.set(false);
   }
 
   onLogout(): void {

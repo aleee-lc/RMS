@@ -107,7 +107,7 @@ export class GoogleHotelsPublicScraper implements RateShoppingScraper {
           ];
 
           const currencyRegex =
-            /((?:USD|MXN|EUR|GBP|CAD|JPY|BRL)\s?\d[\d.,]*)|([€$£]\s?\d[\d.,]*)/i;
+            /(MX\$\s?\d[\d.,]*)|((?:USD|MXN|EUR|GBP|CAD|JPY|BRL)\s?\d[\d.,]*)|([€$£]\s?\d[\d.,]*)/i;
           const availabilityRegex = /(sold out|unavailable|agotado|not available)/i;
           const occupancyRegex = /(\d+)\s+adult/i;
 
@@ -304,31 +304,29 @@ export class GoogleHotelsPublicScraper implements RateShoppingScraper {
   }
 
   private extractPrice(text: string): { price: number; currency: string } | null {
+    // MX$ (Google Hotels Mexico format) → MXN
+    const mxnMatch = text.match(/MX\$\s*([\d.,]+)/i);
+    if (mxnMatch) {
+      const value = this.parseNumber(mxnMatch[1]);
+      if (value !== null) return { price: value, currency: 'MXN' };
+    }
+
+    // Explicit currency codes: MXN 1665, USD 40, etc.
     const currencyCodeMatch = text.match(/\b(USD|MXN|EUR|GBP|CAD|JPY|BRL)\s*([\d.,]+)\b/i);
     if (currencyCodeMatch) {
       const value = this.parseNumber(currencyCodeMatch[2]);
       if (value !== null) {
-        return {
-          price: value,
-          currency: currencyCodeMatch[1].toUpperCase()
-        };
+        return { price: value, currency: currencyCodeMatch[1].toUpperCase() };
       }
     }
 
-    const symbolMatch = text.match(/([€$£])\s*([\d.,]+)/);
+    // Generic symbol fallback: €, £ (not $ alone — too ambiguous for MX context)
+    const symbolMatch = text.match(/([€£])\s*([\d.,]+)/);
     if (symbolMatch) {
       const value = this.parseNumber(symbolMatch[2]);
-      const symbolCurrency: Record<string, string> = {
-        $: 'USD',
-        '€': 'EUR',
-        '£': 'GBP'
-      };
-
+      const symbolCurrency: Record<string, string> = { '€': 'EUR', '£': 'GBP' };
       if (value !== null) {
-        return {
-          price: value,
-          currency: symbolCurrency[symbolMatch[1]] ?? 'USD'
-        };
+        return { price: value, currency: symbolCurrency[symbolMatch[1]] ?? 'EUR' };
       }
     }
 

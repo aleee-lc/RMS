@@ -56,7 +56,9 @@ export class RateShoppingNormalizer {
             : // unknown mode: assume nightly for conservative market comparison.
               round2(row.price);
 
-      if (!Number.isFinite(normalizedPrice) || normalizedPrice <= 0) {
+      // Discard obvious non-room values (taxes, fees, distance numbers, etc.)
+      const minRoomPrice = 200;
+      if (!Number.isFinite(normalizedPrice) || normalizedPrice < minRoomPrice) {
         continue;
       }
 

@@ -1,4 +1,4 @@
-﻿import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import {
   RawRateShoppingResult,
   RatePriceMode,
@@ -28,6 +28,8 @@ interface PageLike {
   goto(url: string, options?: Record<string, unknown>): Promise<unknown>;
   waitForTimeout(timeoutMs: number): Promise<void>;
   evaluate<T>(pageFunction: () => T): Promise<T>;
+  title(): Promise<string>;
+  url(): string;
 }
 
 interface PlaywrightLike {
@@ -36,21 +38,38 @@ interface PlaywrightLike {
   };
 }
 
+const DEMO_SOURCES = ['Booking.com', 'Expedia', 'Hotels.com', 'Agoda', 'Direct'];
+
 @Injectable()
 export class GoogleHotelsPublicScraper implements RateShoppingScraper {
   readonly name = 'google-hotels-public';
 
   private readonly logger = new Logger(GoogleHotelsPublicScraper.name);
   private readonly navigationTimeoutMs = Number(
-    process.env.RATE_SHOPPING_NAVIGATION_TIMEOUT_MS ?? 30000
+    process.env.RATE_SHOPPING_NAVIGATION_TIMEOUT_MS ?? 35000
   );
-  private readonly settleDelayMs = Number(process.env.RATE_SHOPPING_SETTLE_DELAY_MS ?? 2200);
+  private readonly settleDelayMs = Number(process.env.RATE_SHOPPING_SETTLE_DELAY_MS ?? 4000);
+  private readonly demoMode = process.env.RATE_SHOPPING_DEMO_MODE === 'true';
 
   async scrape(input: RateShoppingSearchInput): Promise<RawRateShoppingResult[]> {
+    if (this.demoMode) {
+      this.logger.log(`[DEMO] Returning demo rates for "${input.targetHotelName}"`);
+      return this.buildDemoResults(input);
+    }
+
     const playwright = await this.loadPlaywright();
     const browser = await playwright.chromium.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--no-zygote',
+        '--single-process',
+        '--disable-extensions',
+        '--disable-software-rasterizer'
+      ]
     });
 
     try {
@@ -63,11 +82,17 @@ export class GoogleHotelsPublicScraper implements RateShoppingScraper {
 
       try {
         const targetUrl = this.buildSearchUrl(input);
+        this.logger.log(`Scraping "${input.targetHotelName}" → ${targetUrl}`);
+
         await page.goto(targetUrl, {
           waitUntil: 'domcontentloaded',
           timeout: this.navigationTimeoutMs
         });
         await page.waitForTimeout(this.settleDelayMs);
+
+        const pageTitle = await page.title();
+        const finalUrl = page.url();
+        this.logger.log(`Page loaded: title="${pageTitle}" url=${finalUrl}`);
 
         const candidates = await page.evaluate<ExtractedDomCandidate[]>(() => {
           const sourceMatchers: Array<{ regex: RegExp; label: string }> = [
@@ -82,7 +107,7 @@ export class GoogleHotelsPublicScraper implements RateShoppingScraper {
           ];
 
           const currencyRegex =
-            /((?:USD|MXN|EUR|GBP|CAD|JPY|BRL)\s?\d[\d.,]*)|([\u20AC$\u00A3]\s?\d[\d.,]*)/i;
+            /((?:USD|MXN|EUR|GBP|CAD|JPY|BRL)\s?\d[\d.,]*)|([€$£]\s?\d[\d.,]*)/i;
           const availabilityRegex = /(sold out|unavailable|agotado|not available)/i;
           const occupancyRegex = /(\d+)\s+adult/i;
 
@@ -91,7 +116,13 @@ export class GoogleHotelsPublicScraper implements RateShoppingScraper {
             2500
           );
 
-          const out: ExtractedDomCandidate[] = [];
+          const out: Array<{
+            source: string | null;
+            text: string;
+            priceText: string | null;
+            availabilityText: string | null;
+            occupancyText: string | null;
+          }> = [];
           const seen = new Set<string>();
 
           for (const node of nodes) {
@@ -143,6 +174,18 @@ export class GoogleHotelsPublicScraper implements RateShoppingScraper {
           return out.slice(0, 80);
         });
 
+        this.logger.log(
+          `"${input.targetHotelName}": ${candidates.length} candidates found`
+        );
+
+        if (candidates.length === 0) {
+          this.logger.warn(
+            `No candidates for "${input.targetHotelName}". ` +
+            `Google may be blocking. title="${pageTitle}". ` +
+            `Set RATE_SHOPPING_DEMO_MODE=true for demo data.`
+          );
+        }
+
         return candidates
           .map((candidate) => this.toRawResult(input, candidate))
           .filter((result): result is RawRateShoppingResult => result !== null);
@@ -156,6 +199,36 @@ export class GoogleHotelsPublicScraper implements RateShoppingScraper {
     } finally {
       await browser.close();
     }
+  }
+
+  private buildDemoResults(input: RateShoppingSearchInput): RawRateShoppingResult[] {
+    const seed = this.nameHash(input.targetHotelName);
+    const basePrice = 900 + (seed % 800);
+    const now = new Date();
+
+    return DEMO_SOURCES.map((source, index) => {
+      const variation = 0.85 + ((seed * (index + 1)) % 30) / 100;
+      const price = Math.round(basePrice * variation);
+      return {
+        hotelName: input.targetHotelName,
+        source,
+        price,
+        currency: 'MXN',
+        availability: true,
+        occupancyAdults: input.adults,
+        priceMode: 'per_night' as RatePriceMode,
+        rawText: `${source} MXN${price} per night`,
+        scrapedAt: now
+      };
+    });
+  }
+
+  private nameHash(name: string): number {
+    let hash = 0;
+    for (let index = 0; index < name.length; index++) {
+      hash = ((hash << 5) - hash + name.charCodeAt(index)) | 0;
+    }
+    return Math.abs(hash);
   }
 
   private buildSearchUrl(input: RateShoppingSearchInput): string {
@@ -188,7 +261,6 @@ export class GoogleHotelsPublicScraper implements RateShoppingScraper {
     const priceMode = this.inferPriceMode(candidate.text);
     const source = candidate.source ?? 'Google Hotels';
 
-    // Keep raw entries even with null price; normalizer will discard incomplete rows.
     return {
       hotelName: input.targetHotelName,
       source,
@@ -243,13 +315,13 @@ export class GoogleHotelsPublicScraper implements RateShoppingScraper {
       }
     }
 
-    const symbolMatch = text.match(/([\u20AC$\u00A3])\s*([\d.,]+)/);
+    const symbolMatch = text.match(/([€$£])\s*([\d.,]+)/);
     if (symbolMatch) {
       const value = this.parseNumber(symbolMatch[2]);
       const symbolCurrency: Record<string, string> = {
         $: 'USD',
-        '\u20AC': 'EUR',
-        '\u00A3': 'GBP'
+        '€': 'EUR',
+        '£': 'GBP'
       };
 
       if (value !== null) {

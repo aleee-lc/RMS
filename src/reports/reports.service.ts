@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { RecommendationAction } from '@prisma/client';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
@@ -51,6 +51,7 @@ interface RevenueCalendarTemplateContext {
 @Injectable()
 export class ReportsService {
   private readonly significantPriceDiffPct = 10;
+  private readonly logger = new Logger(ReportsService.name);
   private static helpersRegistered = false;
 
   constructor(private readonly prisma: PrismaService) {}
@@ -59,33 +60,41 @@ export class ReportsService {
     this.registerRevenueCalendarHelpers();
 
     const context = this.buildMockRevenueCalendarReport(id, input);
-    const html = await this.renderRevenueCalendarTemplate(context);
-    const browser = await puppeteer.launch({
-      headless: true
-    });
-
     try {
-      const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: 'load' });
-
-      const pdf = await page.pdf({
-        displayHeaderFooter: true,
-        footerTemplate: this.buildRevenueCalendarFooterTemplate(context),
-        format: 'Letter',
-        headerTemplate: '<div></div>',
-        landscape: true,
-        margin: {
-          top: '26px',
-          right: '26px',
-          bottom: '68px',
-          left: '26px'
-        },
-        printBackground: true
+      const html = await this.renderRevenueCalendarTemplate(context);
+      const browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined
       });
 
-      return Buffer.from(pdf);
-    } finally {
-      await browser.close();
+      try {
+        const page = await browser.newPage();
+        await page.setContent(html, { waitUntil: 'load' });
+
+        const pdf = await page.pdf({
+          displayHeaderFooter: true,
+          footerTemplate: this.buildRevenueCalendarFooterTemplate(context),
+          format: 'Letter',
+          headerTemplate: '<div></div>',
+          landscape: true,
+          margin: {
+            top: '26px',
+            right: '26px',
+            bottom: '68px',
+            left: '26px'
+          },
+          printBackground: true
+        });
+
+        return Buffer.from(pdf);
+      } finally {
+        await browser.close();
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Revenue calendar PDF generation failed: ${message}`);
+      return this.buildFallbackRevenueCalendarPdf(context);
     }
   }
 
@@ -1084,6 +1093,7 @@ export class ReportsService {
 
   private async resolveRevenueCalendarTemplatePath(): Promise<string> {
     const candidates = [
+      path.join(process.cwd(), 'dist', 'src', 'reports', 'templates', 'revenue-calendar.hbs'),
       path.join(process.cwd(), 'dist', 'reports', 'templates', 'revenue-calendar.hbs'),
       path.join(process.cwd(), 'src', 'reports', 'templates', 'revenue-calendar.hbs')
     ];
@@ -1147,5 +1157,75 @@ export class ReportsService {
       hour: '2-digit',
       minute: '2-digit'
     }).format(date);
+  }
+
+  private buildFallbackRevenueCalendarPdf(context: RevenueCalendarTemplateContext): Buffer {
+    const lines = [
+      context.title,
+      context.hotelName,
+      `Rango: ${context.dateRange}`,
+      `Impreso: ${context.printedAt}`,
+      `Usuario: ${context.printedBy}`,
+      '',
+      'FECHA | DOW | DTA | OCC | PU7D | ADR | REVENUE | TARIFA | COMP SET | GAP | RANK',
+      ...context.rows.map(
+        (row) =>
+          `${row.date} | ${row.dow} | ${row.dta} | ${row.occ}% | ${row.pu7d} | MX$${row.adr} | MX$${row.revenue} | MX$${row.tarifa} | MX$${row.compSet} | ${row.gap}% | ${row.rank}`
+      )
+    ];
+
+    return this.assemblePlainPdf(lines);
+  }
+
+  private assemblePlainPdf(lines: string[]): Buffer {
+    const width = 792;
+    const height = 612;
+    const margin = 36;
+    const lineHeight = 14;
+    let y = height - margin;
+    const contentLines: string[] = [];
+
+    for (const line of lines) {
+      if (y < margin) {
+        break;
+      }
+
+      contentLines.push(`BT /F1 10 Tf ${margin} ${y} Td (${this.escapePdfText(line)}) Tj ET`);
+      y -= lineHeight;
+    }
+
+    const content = contentLines.join('\n');
+    const objects = [
+      '<< /Type /Catalog /Pages 2 0 R >>',
+      '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${width} ${height}] /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >> /Contents 4 0 R >>`,
+      `<< /Length ${Buffer.byteLength(content, 'ascii')} >>\nstream\n${content}\nendstream`
+    ];
+
+    let body = '%PDF-1.4\n';
+    const offsets = [0];
+    objects.forEach((object, index) => {
+      offsets.push(Buffer.byteLength(body, 'ascii'));
+      body += `${index + 1} 0 obj\n${object}\nendobj\n`;
+    });
+    const xrefOffset = Buffer.byteLength(body, 'ascii');
+    body += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+    body += offsets
+      .slice(1)
+      .map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`)
+      .join('');
+    body += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+
+    return Buffer.from(body, 'ascii');
+  }
+
+  private escapePdfText(text: string): string {
+    return text
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^\x20-\x7E]/g, '')
+      .replace(/\\/g, '\\\\')
+      .replace(/\(/g, '\\(')
+      .replace(/\)/g, '\\)');
   }
 }

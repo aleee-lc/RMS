@@ -3,7 +3,6 @@ import { RecommendationAction } from '@prisma/client';
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import Handlebars from 'handlebars';
-import puppeteer from 'puppeteer';
 import { dateKey, enumerateDateRange, toUtcDateOnly } from '../common/utils/date.util';
 import { round2 } from '../common/utils/number.util';
 import { PrismaService } from '../prisma/prisma.service';
@@ -62,12 +61,17 @@ export class ReportsService {
     const context = this.buildMockRevenueCalendarReport(id, input);
     try {
       const html = await this.renderRevenueCalendarTemplate(context);
-      const executablePath = await this.resolveChromiumExecutablePath();
-      this.logger.log(`PDF: launching Puppeteer${executablePath ? ` with executablePath=${executablePath}` : ' (auto-detect)'}`);
-      const browser = await puppeteer.launch({
+      const playwright = await this.loadPlaywright();
+      this.logger.log(`PDF: launching Playwright Chromium for id=${id}`);
+      const browser = await playwright.chromium.launch({
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-        executablePath
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--no-zygote'
+        ]
       });
 
       try {
@@ -89,14 +93,14 @@ export class ReportsService {
           printBackground: true
         });
 
-        this.logger.log(`PDF: Puppeteer generated ${pdf.byteLength} bytes for id=${id}`);
+        this.logger.log(`PDF: Playwright generated ${Buffer.from(pdf).byteLength} bytes for id=${id}`);
         return Buffer.from(pdf);
       } finally {
         await browser.close();
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(`PDF: Puppeteer failed for id=${id}, using fallback renderer. Reason: ${message}`);
+      this.logger.error(`PDF: Playwright failed for id=${id}, using fallback renderer. Reason: ${message}`);
       return this.buildFallbackRevenueCalendarPdf(context);
     }
   }
@@ -1113,28 +1117,27 @@ export class ReportsService {
     throw new NotFoundException('Revenue calendar template not found');
   }
 
-  private async resolveChromiumExecutablePath(): Promise<string | undefined> {
-    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-      return process.env.PUPPETEER_EXECUTABLE_PATH;
+  private async loadPlaywright(): Promise<{
+    chromium: {
+      launch(options?: Record<string, unknown>): Promise<{
+        newPage(): Promise<{
+          setContent(html: string, options?: Record<string, unknown>): Promise<void>;
+          pdf(options?: Record<string, unknown>): Promise<Uint8Array>;
+        }>;
+        close(): Promise<void>;
+      }>;
+    };
+  }> {
+    const dynamicImport = new Function(
+      'moduleName',
+      'return import(moduleName);'
+    ) as (moduleName: string) => Promise<unknown>;
+
+    const mod = (await dynamicImport('playwright')) as Record<string, unknown>;
+    if (!mod.chromium) {
+      throw new Error('Playwright chromium not available');
     }
-
-    try {
-      const dynamicImport = new Function(
-        'moduleName',
-        'return import(moduleName);'
-      ) as (moduleName: string) => Promise<unknown>;
-
-      const playwrightModule = (await dynamicImport('playwright')) as {
-        chromium?: { executablePath?: () => string };
-      };
-
-      const executablePath = playwrightModule.chromium?.executablePath?.();
-      return executablePath || undefined;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.logger.warn(`Could not resolve Chromium executable from Playwright: ${message}`);
-      return undefined;
-    }
+    return mod as never;
   }
 
   private buildRevenueCalendarFooterTemplate(context: RevenueCalendarTemplateContext): string {

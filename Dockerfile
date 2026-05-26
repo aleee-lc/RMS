@@ -53,4 +53,4 @@ RUN npm prune --omit=dev
 
 EXPOSE 10000
 
-CMD ["sh", "-c", "(npx prisma migrate resolve --rolled-back 20260424110000_add_rate_shop_snapshot 2>/dev/null || true) && (npx prisma migrate resolve --rolled-back 20260424123000_add_recommendation_settings 2>/dev/null || true) && (npx prisma migrate resolve --rolled-back 20260520123000_add_auth_multitenancy 2>/dev/null || true) && npx prisma migrate deploy && node dist/src/main.js"]
+CMD ["sh", "-c", "(npx prisma migrate resolve --applied 20260424110000_add_rate_shop_snapshot 2>/dev/null || true) && (npx prisma migrate resolve --applied 20260424123000_add_recommendation_settings 2>/dev/null || true) && npx prisma migrate deploy && node dist/src/main.js"]

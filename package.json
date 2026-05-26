@@ -6,6 +6,7 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
+    "render:build": "npm run prisma:generate && npx playwright install chromium && npm run build",
     "start": "node dist/src/main.js",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/src/main.js",

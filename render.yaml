@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: rms-api
+    env: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PLAYWRIGHT_BROWSERS_PATH
+        value: /ms-playwright

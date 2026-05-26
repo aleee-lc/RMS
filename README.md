@@ -299,3 +299,61 @@ Key relationships:
 - Add authentication/authorization before real multi-tenant use.
 - Move heavy recommendation/rate-shopping jobs to queues or production-grade schedulers.
 - Validate scraping limits and policies before automating rate shopping.
+
+## Render Deployment
+
+There are two supported ways to run this backend on Render.
+
+### Option 1: Docker service
+
+This repo includes:
+
+- `Dockerfile`
+- `render.yaml`
+- public health endpoint: `GET /health`
+
+Use this option if you need:
+
+- Playwright rate shopping
+- Puppeteer PDF rendering
+- stable browser dependencies in production
+
+Recommended setup:
+
+- Runtime: `Docker`
+- Health check path: `/health`
+
+After deploy, verify:
+
+```bash
+curl https://YOUR-RENDER-URL/health
+```
+
+### Option 2: Node service without Docker
+
+If the service is still configured as a normal Node web service, Playwright browsers are not guaranteed to exist unless you install them during build.
+
+Use these Render settings:
+
+- Build Command:
+
+```bash
+npm ci && npm run render:build
+```
+
+- Start Command:
+
+```bash
+npm run start
+```
+
+- Health Check Path:
+
+```text
+/health
+```
+
+Important:
+
+- If you see an error like `browserType.launch: Executable doesn't exist`, Render is missing the Playwright browser install step.
+- In that case, either switch to the Docker service or keep the Node service and use the build command above.

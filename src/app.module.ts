@@ -14,6 +14,7 @@ import { RateShoppingModule } from './rate-shopping/rate-shopping.module';
 import { BiModule } from './bi/bi.module';
 import { AuthModule } from './auth/auth.module';
 import { ExecutiveModule } from './executive/executive.module';
+import { HealthController } from './health.controller';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ExecutiveModule } from './executive/executive.module';
     RateShoppingModule,
     BiModule,
     ExecutiveModule
-  ]
+  ],
+  controllers: [HealthController]
 })
 export class AppModule {}

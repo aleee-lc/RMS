@@ -62,10 +62,11 @@ export class ReportsService {
     const context = this.buildMockRevenueCalendarReport(id, input);
     try {
       const html = await this.renderRevenueCalendarTemplate(context);
+      const executablePath = await this.resolveChromiumExecutablePath();
       const browser = await puppeteer.launch({
         headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined
+        executablePath
       });
 
       try {
@@ -1108,6 +1109,30 @@ export class ReportsService {
     }
 
     throw new NotFoundException('Revenue calendar template not found');
+  }
+
+  private async resolveChromiumExecutablePath(): Promise<string | undefined> {
+    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+      return process.env.PUPPETEER_EXECUTABLE_PATH;
+    }
+
+    try {
+      const dynamicImport = new Function(
+        'moduleName',
+        'return import(moduleName);'
+      ) as (moduleName: string) => Promise<unknown>;
+
+      const playwrightModule = (await dynamicImport('playwright')) as {
+        chromium?: { executablePath?: () => string };
+      };
+
+      const executablePath = playwrightModule.chromium?.executablePath?.();
+      return executablePath || undefined;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`Could not resolve Chromium executable from Playwright: ${message}`);
+      return undefined;
+    }
   }
 
   private buildRevenueCalendarFooterTemplate(context: RevenueCalendarTemplateContext): string {

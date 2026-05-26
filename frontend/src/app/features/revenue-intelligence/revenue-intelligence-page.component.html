@@ -85,6 +85,84 @@
   </div>
 
   <div class="command-layout" *ngIf="summary() as data; else emptyState">
+    <section class="section-card rate-watch-panel">
+      <div class="rate-watch-copy">
+        <span class="panel-kicker">Public Rate Watch</span>
+        <h2>Lectura publica del comp set</h2>
+        <p>
+          Tarifas publicas detectadas en internet para la fecha de entrada inicial del rango.
+        </p>
+      </div>
+
+      <div class="rate-watch-toolbar">
+        <mat-form-field appearance="outline" class="city-field">
+          <mat-label>Ciudad de busqueda</mat-label>
+          <input
+            matInput
+            [value]="marketCity()"
+            (input)="onMarketCityChanged($any($event.target).value)"
+            placeholder="Los Mochis"
+          />
+        </mat-form-field>
+
+        <button mat-flat-button type="button" (click)="onRefreshRateShop()" [disabled]="rateShopRefreshing()">
+          <mat-icon>{{ rateShopRefreshing() ? 'hourglass_empty' : 'travel_explore' }}</mat-icon>
+          {{ rateShopRefreshing() ? 'Actualizando' : 'Refresh rate shop' }}
+        </button>
+      </div>
+
+      <div class="rate-watch-grid" *ngIf="publicRateWatch() as market; else emptyRateWatch">
+        <div class="watch-metric">
+          <span>Tu tarifa publica</span>
+          <strong>{{ market.yourPrice === null ? '-' : (market.yourPrice | currency: 'MXN' : 'symbol' : '1.0-0') }}</strong>
+        </div>
+        <div class="watch-metric">
+          <span>Comp set avg</span>
+          <strong>{{ market.marketAverage === null ? '-' : (market.marketAverage | currency: 'MXN' : 'symbol' : '1.0-0') }}</strong>
+        </div>
+        <div class="watch-metric">
+          <span>Mas baja publica</span>
+          <strong>{{ market.lowestPublicRate === null ? '-' : (market.lowestPublicRate | currency: 'MXN' : 'symbol' : '1.0-0') }}</strong>
+        </div>
+        <div class="watch-metric">
+          <span>Competidores abajo</span>
+          <strong>{{ market.competitorsBelowYou }}</strong>
+        </div>
+      </div>
+
+      <div class="rate-watch-summary" *ngIf="publicRateWatch() as market">
+        <div>
+          <span>Fecha foco</span>
+          <strong>{{ market.date }}</strong>
+        </div>
+        <div>
+          <span>Gap publico</span>
+          <strong>{{ market.gapPct === null ? '-' : (market.gapPct | number: '1.1-1') + '%' }}</strong>
+        </div>
+        <div>
+          <span>Cheapest competitor</span>
+          <strong>{{ market.cheapestCompetitor?.name ?? 'Sin dato' }}</strong>
+        </div>
+        <div>
+          <span>Ultimo scrape</span>
+          <strong>{{ rateShopFreshnessLabel() }}</strong>
+        </div>
+      </div>
+
+      <div class="rate-watch-list" *ngIf="rateShopSummary()?.cheapestPublicRates?.length">
+        <article *ngFor="let item of rateShopSummary()?.cheapestPublicRates">
+          <div>
+            <strong>{{ item.date }}</strong>
+            <p>{{ item.competitorName ?? 'Sin competidor' }}</p>
+          </div>
+          <div class="list-meta">
+            <strong>{{ item.price === null ? '-' : (item.price | currency: 'MXN' : 'symbol' : '1.0-0') }}</strong>
+            <span>{{ item.gapPct === null ? '-' : (item.gapPct | number: '1.1-1') + '%' }}</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
     <section class="section-card spotlight-panel" *ngIf="selectedDate() as selected">
       <div class="spotlight-copy">
         <span class="panel-kicker">Command Spotlight</span>
@@ -227,6 +305,12 @@
   <ng-template #emptyState>
     <div class="state-card">
       <strong>No hay datos para este rango.</strong> Ajusta fechas o valida el backend.
+    </div>
+  </ng-template>
+
+  <ng-template #emptyRateWatch>
+    <div class="state-card compact-state" *ngIf="!rateShopLoading()">
+      <strong>Sin snapshot publico para este rango.</strong> Ejecuta `Refresh rate shop`.
     </div>
   </ng-template>
 </section>

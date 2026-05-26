@@ -4,6 +4,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { HotelContextService } from '../common/hotel-context.service';
 import { parseIsoDate } from '../common/utils/date.util';
 import { RateShopSnapshotsQueryDto } from './dto/rate-shop-snapshots-query.dto';
+import { RateShopSummaryQueryDto } from './dto/rate-shop-summary-query.dto';
 import { RunRateShoppingDto } from './dto/run-rate-shopping.dto';
 import { RateShoppingService } from './rate-shopping.service';
 
@@ -80,6 +81,32 @@ export class RateShoppingController {
         available: item.available,
         scrapedAt: item.scrapedAt.toISOString()
       }))
+    };
+  }
+
+  @Get('summary')
+  async getSummary(
+    @Query() query: RateShopSummaryQueryDto,
+    @CurrentUser() user: AuthenticatedUser
+  ) {
+    const hotel = await this.hotelContextService.resolveHotelForUser(user, query.hotelId);
+    const startDate = parseIsoDate(query.startDate);
+    const endDate = parseIsoDate(query.endDate);
+
+    if (startDate && endDate && startDate > endDate) {
+      throw new BadRequestException('startDate must be before or equal to endDate.');
+    }
+
+    const summary = await this.rateShoppingService.getSummary({
+      hotelId: hotel.id,
+      startDate: startDate ?? undefined,
+      endDate: endDate ?? undefined,
+      city: query.city?.trim() || null
+    });
+
+    return {
+      hotel,
+      ...summary
     };
   }
 }

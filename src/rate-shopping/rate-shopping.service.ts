@@ -39,6 +39,21 @@ export interface RunRateShoppingInput {
   competitorNames?: string[];
 }
 
+interface RateShopSummaryDateItem {
+  date: string;
+  currency: string | null;
+  yourPrice: number | null;
+  marketAverage: number | null;
+  lowestPublicRate: number | null;
+  highestPublicRate: number | null;
+  competitorsBelowYou: number;
+  competitorCount: number;
+  gapPct: number | null;
+  cheapestCompetitor: { name: string; price: number } | null;
+}
+
+type RateShopSnapshotListItem = Awaited<ReturnType<PrismaService['rateShopSnapshot']['findMany']>>[number];
+
 @Injectable()
 export class RateShoppingService {
   private readonly logger = new Logger(RateShoppingService.name);
@@ -199,6 +214,78 @@ export class RateShoppingService {
       orderBy: [{ checkInDate: 'asc' }, { scrapedAt: 'desc' }],
       take: Math.min(Math.max(params.limit ?? 250, 1), 1000)
     });
+  }
+
+  async getSummary(params: {
+    hotelId: number;
+    startDate?: Date;
+    endDate?: Date;
+    city?: string | null;
+  }) {
+    const hotel = await this.prisma.hotel.findUnique({
+      where: { id: params.hotelId },
+      select: { id: true, name: true, currency: true }
+    });
+
+    if (!hotel) {
+      throw new NotFoundException(`Hotel ${params.hotelId} not found`);
+    }
+
+    const snapshots = await this.listSnapshots({
+      hotelId: params.hotelId,
+      startDate: params.startDate,
+      endDate: params.endDate,
+      limit: 1000
+    });
+
+    const latestByDateCompetitor = new Map<string, (typeof snapshots)[number]>();
+    for (const snapshot of snapshots) {
+      const key = `${dateKey(snapshot.checkInDate)}::${snapshot.competitorName}`;
+      const current = latestByDateCompetitor.get(key);
+      if (!current || snapshot.scrapedAt > current.scrapedAt) {
+        latestByDateCompetitor.set(key, snapshot);
+      }
+    }
+
+    const byDate = new Map<string, RateShopSnapshotListItem[]>();
+    for (const snapshot of latestByDateCompetitor.values()) {
+      const key = dateKey(snapshot.checkInDate);
+      const items = byDate.get(key) ?? [];
+      items.push(snapshot);
+      byDate.set(key, items);
+    }
+
+    const items = [...byDate.entries()]
+      .sort((a, b) => (a[0] < b[0] ? -1 : 1))
+      .map(([date, rows]) => this.buildSummaryDateItem(hotel.name, date, rows));
+
+    const spotlight = items[0] ?? null;
+    const latestScrapedAt =
+      snapshots.length > 0
+        ? new Date(Math.max(...snapshots.map((snapshot) => snapshot.scrapedAt.getTime()))).toISOString()
+        : null;
+
+    return {
+      query: {
+        startDate: params.startDate ? dateKey(params.startDate) : null,
+        endDate: params.endDate ? dateKey(params.endDate) : null,
+        city: params.city ?? null
+      },
+      lastScrapedAt: latestScrapedAt,
+      snapshotCount: snapshots.length,
+      datesCovered: items.length,
+      spotlight,
+      items,
+      cheapestPublicRates: items
+        .filter((item) => item.cheapestCompetitor)
+        .slice(0, 5)
+        .map((item) => ({
+          date: item.date,
+          competitorName: item.cheapestCompetitor?.name ?? null,
+          price: item.cheapestCompetitor?.price ?? null,
+          gapPct: item.gapPct
+        }))
+    };
   }
 
   async runDailyForAllHotels() {
@@ -446,5 +533,51 @@ export class RateShoppingService {
 
   private sleep(milliseconds: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, milliseconds));
+  }
+
+  private buildSummaryDateItem(
+    hotelName: string,
+    date: string,
+    rows: RateShopSnapshotListItem[]
+  ): RateShopSummaryDateItem {
+    const hotelRow = rows.find((row) => row.competitorName === hotelName) ?? null;
+    const competitorRows = rows.filter((row) => row.competitorName !== hotelName);
+    const currency =
+      this.pickDominantCurrency(
+        competitorRows.map((row) => row.currency).filter((value): value is string => Boolean(value))
+      ) ??
+      hotelRow?.currency ??
+      null;
+
+    const sameCurrencyCompetitors = competitorRows.filter((row) => row.currency === currency);
+    const prices = sameCurrencyCompetitors.map((row) => Number(row.price));
+    const stats = this.computeMarketStats(prices);
+    const yourPrice = hotelRow && hotelRow.currency === currency ? Number(hotelRow.price) : null;
+    const competitorsBelowYou =
+      yourPrice === null
+        ? 0
+        : sameCurrencyCompetitors.filter((row) => Number(row.price) < yourPrice).length;
+    const cheapestCompetitor =
+      sameCurrencyCompetitors.length > 0
+        ? sameCurrencyCompetitors
+            .map((row) => ({ name: row.competitorName, price: Number(row.price) }))
+            .sort((a, b) => a.price - b.price)[0]
+        : null;
+
+    return {
+      date,
+      currency,
+      yourPrice,
+      marketAverage: stats.average,
+      lowestPublicRate: stats.min,
+      highestPublicRate: stats.max,
+      competitorsBelowYou,
+      competitorCount: sameCurrencyCompetitors.length,
+      gapPct:
+        yourPrice !== null && stats.average !== null && stats.average !== 0
+          ? round2(((yourPrice - stats.average) / stats.average) * 100)
+          : null,
+      cheapestCompetitor
+    };
   }
 }

@@ -95,4 +95,44 @@ describe('RateShoppingService', () => {
     expect(result.summary.marketAverage).toBe(100);
     expect(result.summary.marketRateId).toBe(300);
   });
+
+  it('builds a summary from latest public snapshots', async () => {
+    prisma.rateShopSnapshot.findMany.mockResolvedValue([
+      {
+        id: 1,
+        competitorName: 'My Hotel',
+        source: 'Direct',
+        checkInDate: new Date('2026-06-10T00:00:00.000Z'),
+        checkOutDate: new Date('2026-06-11T00:00:00.000Z'),
+        adults: 2,
+        price: 120,
+        currency: 'USD',
+        available: true,
+        scrapedAt: new Date('2026-04-24T10:00:00.000Z')
+      },
+      {
+        id: 2,
+        competitorName: 'Competitor A',
+        source: 'Booking',
+        checkInDate: new Date('2026-06-10T00:00:00.000Z'),
+        checkOutDate: new Date('2026-06-11T00:00:00.000Z'),
+        adults: 2,
+        price: 100,
+        currency: 'USD',
+        available: true,
+        scrapedAt: new Date('2026-04-24T10:00:00.000Z')
+      }
+    ]);
+
+    const result = await service.getSummary({
+      hotelId: 1,
+      startDate: new Date('2026-06-10T00:00:00.000Z'),
+      endDate: new Date('2026-06-10T00:00:00.000Z')
+    });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.spotlight?.marketAverage).toBe(100);
+    expect(result.spotlight?.yourPrice).toBe(120);
+    expect(result.spotlight?.competitorsBelowYou).toBe(1);
+  });
 });

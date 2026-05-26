@@ -5,7 +5,7 @@
 
 .app-shell {
   display: grid;
-  grid-template-columns: 76px minmax(0, 1fr);
+  grid-template-columns: 88px minmax(0, 1fr);
   min-height: 100vh;
   transition: grid-template-columns 180ms ease;
 }
@@ -45,7 +45,7 @@
 .brand-logo {
   display: block;
   height: auto;
-  width: 112px;
+  width: 132px;
   flex: 0 0 auto;
 }
 
@@ -154,7 +154,7 @@
   }
 
   .sidebar:not(:hover):not(.pinned) .brand-logo {
-    width: 42px;
+    width: 56px;
   }
 
   .sidebar:not(:hover):not(.pinned) .brand-copy,

@@ -57,11 +57,6 @@
   min-width: 136px;
 }
 
-.hero-actions [mat-flat-button] {
-  --mdc-filled-button-container-color: var(--brand-700);
-  --mdc-filled-button-label-text-color: #fff;
-}
-
 .toolbar-panel {
   display: grid;
   gap: 18px;
@@ -103,6 +98,12 @@
 .export-actions {
   display: flex;
   gap: 10px;
+  align-items: center;
+}
+
+.export-actions [mat-flat-button] {
+  --mdc-filled-button-container-color: var(--brand-700);
+  --mdc-filled-button-label-text-color: #fff;
 }
 
 .calendar-layout {

@@ -46,6 +46,7 @@ RUN npx playwright install chromium
 
 COPY . .
 
+RUN npm run prisma:generate
 RUN npm run build
 ENV NODE_ENV=production
 RUN npm prune --omit=dev

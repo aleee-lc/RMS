@@ -1,6 +1,5 @@
 FROM node:22-bookworm-slim
 
-ENV NODE_ENV=production
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 
@@ -42,12 +41,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY package*.json ./
 
-RUN npm ci
+RUN npm ci --include=dev
 RUN npx playwright install chromium
 
 COPY . .
 
 RUN npm run build
+ENV NODE_ENV=production
 RUN npm prune --omit=dev
 
 EXPOSE 10000

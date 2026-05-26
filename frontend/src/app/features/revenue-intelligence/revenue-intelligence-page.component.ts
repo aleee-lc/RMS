@@ -9,7 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { forkJoin } from 'rxjs';
+import { catchError, forkJoin, of } from 'rxjs';
 import { BiExecutiveSummaryResponse, RevenueCalendarItem } from '../../core/models/bi.model';
 import { DateRange } from '../../core/models/date-range.model';
 import { RateShopSummaryResponse } from '../../core/models/rate-shopping.model';
@@ -165,19 +165,17 @@ export class RevenueIntelligencePageComponent {
 
     forkJoin({
       summary: this.biService.getExecutiveSummary(dateRange),
-      calendar: this.biService.getRevenueCalendar(dateRange),
-      rateShopSummary: this.rateShoppingService.getSummary(dateRange, this.marketCity().trim())
+      calendar: this.biService.getRevenueCalendar(dateRange)
     }).subscribe({
-      next: ({ summary, calendar, rateShopSummary }) => {
+      next: ({ summary, calendar }) => {
         this.summary.set(summary);
-        this.rateShopSummary.set(rateShopSummary);
         this.calendar.set(calendar.items);
         this.selectedDate.set(calendar.items[0] ?? null);
         this.lastUpdated.set(
           new Date().toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })
         );
         this.loading.set(false);
-        this.rateShopLoading.set(false);
+        this.loadRateShopSummary(dateRange);
       },
       error: () => {
         this.errorMessage.set('No fue posible cargar Revenue Command. Verifica backend y datos.');
@@ -189,16 +187,25 @@ export class RevenueIntelligencePageComponent {
 
   private loadRateShopSummary(dateRange: DateRange, afterRefresh = false): void {
     this.rateShopLoading.set(!afterRefresh);
-    this.rateShoppingService.getSummary(dateRange, this.marketCity().trim()).subscribe({
+    this.rateShoppingService
+      .getSummary(dateRange, this.marketCity().trim())
+      .pipe(
+        catchError(() => {
+          this.rateShopSummary.set(null);
+          this.rateShopLoading.set(false);
+          this.rateShopRefreshing.set(false);
+          return of(null);
+        })
+      )
+      .subscribe({
       next: (summary) => {
+        if (!summary) {
+          return;
+        }
         this.rateShopSummary.set(summary);
         this.rateShopLoading.set(false);
         this.rateShopRefreshing.set(false);
       },
-      error: () => {
-        this.rateShopLoading.set(false);
-        this.rateShopRefreshing.set(false);
-      }
     });
   }
 

@@ -1016,9 +1016,9 @@ export class BiService {
   private assemblePdf(pageContents: string[], width: number, height: number): Buffer {
     const objects: string[] = [
       '<< /Type /Catalog /Pages 2 0 R >>',
-      `<< /Type /Pages /Kids ${pageContents
+      `<< /Type /Pages /Kids [${pageContents
         .map((_, index) => `${3 + index * 2} 0 R`)
-        .join(' ')} /Count ${pageContents.length} >>`
+        .join(' ')}] /Count ${pageContents.length} >>`
     ];
 
     pageContents.forEach((content, index) => {

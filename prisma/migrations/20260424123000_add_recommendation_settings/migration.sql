@@ -1,4 +1,4 @@
-﻿-- CreateTable
+-- CreateTable
 CREATE TABLE "RecommendationSettings" (
     "id" SERIAL NOT NULL,
     "hotelId" INTEGER NOT NULL,

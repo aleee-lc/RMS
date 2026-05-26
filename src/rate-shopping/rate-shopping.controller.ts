@@ -1,4 +1,12 @@
-import { BadRequestException, Body, Controller, Get, Post, Query } from '@nestjs/common';
+import {
+  BadGatewayException,
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../auth/auth.types';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { HotelContextService } from '../common/hotel-context.service';
@@ -29,15 +37,21 @@ export class RateShoppingController {
 
     const hotel = await this.hotelContextService.resolveHotelForUser(user, body.hotelId);
 
-    const result = await this.rateShoppingService.runForHotel({
-      hotelId: hotel.id,
-      city: body.city.trim(),
-      checkInDate,
-      checkOutDate,
-      adults: body.adults ?? 2,
-      includeHotelSelf: body.includeHotelSelf ?? true,
-      competitorNames: body.competitorNames
-    });
+    let result;
+    try {
+      result = await this.rateShoppingService.runForHotel({
+        hotelId: hotel.id,
+        city: body.city.trim(),
+        checkInDate,
+        checkOutDate,
+        adults: body.adults ?? 2,
+        includeHotelSelf: body.includeHotelSelf ?? true,
+        competitorNames: body.competitorNames
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new BadGatewayException(`Rate shopping failed: ${message}`);
+    }
 
     return {
       hotel,

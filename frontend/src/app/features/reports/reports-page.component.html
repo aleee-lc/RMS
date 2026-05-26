@@ -127,7 +127,11 @@
       </ng-template>
 
       <div class="inline-actions table-actions">
-        <button mat-stroked-button (click)="onPrintReport()" [disabled]="!selectedReportData()">
+        <button
+          mat-stroked-button
+          (click)="abrirRevenueCalendarPdf('preview')"
+          [disabled]="!selectedReportData()"
+        >
           <mat-icon>print</mat-icon>
           Imprimir reporte
         </button>

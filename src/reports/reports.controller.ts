@@ -1,4 +1,5 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query, Res } from '@nestjs/common';
+import { Response } from 'express';
 import { AuthenticatedUser } from '../auth/auth.types';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { HotelContextService } from '../common/hotel-context.service';
@@ -165,5 +166,30 @@ export class ReportsController {
       hotel,
       ...report
     };
+  }
+
+  @Get('revenue-calendar/:id/pdf')
+  async getRevenueCalendarPdf(
+    @Param('id') id: string,
+    @Query('hotelId') hotelId: string | undefined,
+    @CurrentUser() user: AuthenticatedUser,
+    @Res() res: Response
+  ) {
+    const hotel = await this.hotelContextService.resolveHotelForUser(
+      user,
+      hotelId ? Number(hotelId) : undefined
+    );
+
+    const pdf = await this.reportsService.generateRevenueCalendarPdf(id, {
+      hotelName: hotel.name,
+      printedBy: user.name || user.email
+    });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="revenue-calendar-${encodeURIComponent(id)}.pdf"`
+    );
+    res.send(pdf);
   }
 }

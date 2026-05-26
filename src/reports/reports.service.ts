@@ -1,5 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { RecommendationAction } from '@prisma/client';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
+import Handlebars from 'handlebars';
+import puppeteer from 'puppeteer';
 import { dateKey, enumerateDateRange, toUtcDateOnly } from '../common/utils/date.util';
 import { round2 } from '../common/utils/number.util';
 import { PrismaService } from '../prisma/prisma.service';
@@ -15,11 +19,75 @@ interface CrsReconciliationInput {
   whichDate?: string;
 }
 
+interface RevenueCalendarPdfInput {
+  hotelName: string;
+  printedBy: string;
+}
+
+interface RevenueCalendarRow {
+  date: string;
+  dow: string;
+  dta: number;
+  occ: number;
+  pu7d: number;
+  adr: number;
+  revenue: number;
+  tarifa: number;
+  compSet: number;
+  gap: number;
+  gapRank: string;
+  rank: string;
+}
+
+interface RevenueCalendarTemplateContext {
+  title: string;
+  hotelName: string;
+  dateRange: string;
+  printedAt: string;
+  printedBy: string;
+  rows: RevenueCalendarRow[];
+}
+
 @Injectable()
 export class ReportsService {
   private readonly significantPriceDiffPct = 10;
+  private static helpersRegistered = false;
 
   constructor(private readonly prisma: PrismaService) {}
+
+  async generateRevenueCalendarPdf(id: string, input: RevenueCalendarPdfInput): Promise<Buffer> {
+    this.registerRevenueCalendarHelpers();
+
+    const context = this.buildMockRevenueCalendarReport(id, input);
+    const html = await this.renderRevenueCalendarTemplate(context);
+    const browser = await puppeteer.launch({
+      headless: true
+    });
+
+    try {
+      const page = await browser.newPage();
+      await page.setContent(html, { waitUntil: 'load' });
+
+      const pdf = await page.pdf({
+        displayHeaderFooter: true,
+        footerTemplate: this.buildRevenueCalendarFooterTemplate(context),
+        format: 'Letter',
+        headerTemplate: '<div></div>',
+        landscape: true,
+        margin: {
+          top: '26px',
+          right: '26px',
+          bottom: '68px',
+          left: '26px'
+        },
+        printBackground: true
+      });
+
+      return Buffer.from(pdf);
+    } finally {
+      await browser.close();
+    }
+  }
 
   async getPickupReport(hotelId: number, bookingRange: DateRangeInput, stayRange: DateRangeInput) {
     const reservations = await this.prisma.reservationRaw.findMany({
@@ -901,5 +969,183 @@ export class ReportsService {
   private isExcludedReservationStatus(status: string | null | undefined): boolean {
     const normalized = (status ?? '').toUpperCase();
     return normalized.includes('NO SHOW') || normalized.includes('CANCEL');
+  }
+
+  private registerRevenueCalendarHelpers() {
+    if (ReportsService.helpersRegistered) {
+      return;
+    }
+
+    Handlebars.registerHelper('money', (value: unknown) =>
+      new Intl.NumberFormat('es-MX', {
+        style: 'currency',
+        currency: 'MXN',
+        maximumFractionDigits: 0
+      }).format(Number(value ?? 0))
+    );
+
+    Handlebars.registerHelper('percent', (value: unknown) =>
+      `${new Intl.NumberFormat('es-MX', {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1
+      }).format(Number(value ?? 0))}%`
+    );
+
+    Handlebars.registerHelper('gapClass', (gap: unknown) =>
+      Number(gap ?? 0) > 0 ? 'gap-positive' : 'gap-negative'
+    );
+
+    Handlebars.registerHelper('isFirstRow', (index: unknown) => Number(index ?? -1) === 0);
+
+    ReportsService.helpersRegistered = true;
+  }
+
+  private buildMockRevenueCalendarReport(
+    id: string,
+    input: RevenueCalendarPdfInput
+  ): RevenueCalendarTemplateContext {
+    const printedAt = this.formatPrintedAt(new Date());
+
+    return {
+      title: 'Revenue calendar',
+      hotelName: input.hotelName || 'Hotel Name',
+      dateRange: '2026-05-26 - 2026-05-31',
+      printedAt,
+      printedBy: input.printedBy || 'UserWho printed',
+      rows: [
+        {
+          date: '2026-05-26',
+          dow: 'MAR',
+          dta: 0,
+          occ: 13.1,
+          pu7d: 1,
+          adr: 413,
+          revenue: 6603,
+          tarifa: 1665,
+          compSet: 1678,
+          gap: -0.8,
+          gapRank: 'Rank 3/5',
+          rank: '3/5'
+        },
+        {
+          date: '2026-05-27',
+          dow: 'MIÉ',
+          dta: 1,
+          occ: 70.5,
+          pu7d: 1,
+          adr: 522,
+          revenue: 44900,
+          tarifa: 1665,
+          compSet: 1676,
+          gap: -0.7,
+          gapRank: 'Rank 3/5',
+          rank: '3/5'
+        },
+        {
+          date: '2026-05-28',
+          dow: 'JUE',
+          dta: 2,
+          occ: 70.5,
+          pu7d: 1,
+          adr: 523,
+          revenue: 44957,
+          tarifa: 1350,
+          compSet: 1642,
+          gap: -17.8,
+          gapRank: 'Rank 2/5',
+          rank: '2/5'
+        },
+        {
+          date: '2026-05-31',
+          dow: 'DOM',
+          dta: 5,
+          occ: 11.5,
+          pu7d: 0,
+          adr: 1296,
+          revenue: 18151,
+          tarifa: 1665,
+          compSet: 1416,
+          gap: 17.6,
+          gapRank: 'Rank 4/5',
+          rank: '4/5'
+        }
+      ]
+    };
+  }
+
+  private async renderRevenueCalendarTemplate(
+    context: RevenueCalendarTemplateContext
+  ): Promise<string> {
+    const templatePath = await this.resolveRevenueCalendarTemplatePath();
+    const templateSource = await fs.readFile(templatePath, 'utf8');
+    const template = Handlebars.compile(templateSource);
+    return template(context);
+  }
+
+  private async resolveRevenueCalendarTemplatePath(): Promise<string> {
+    const candidates = [
+      path.join(process.cwd(), 'dist', 'reports', 'templates', 'revenue-calendar.hbs'),
+      path.join(process.cwd(), 'src', 'reports', 'templates', 'revenue-calendar.hbs')
+    ];
+
+    for (const candidate of candidates) {
+      try {
+        await fs.access(candidate);
+        return candidate;
+      } catch {
+        continue;
+      }
+    }
+
+    throw new NotFoundException('Revenue calendar template not found');
+  }
+
+  private buildRevenueCalendarFooterTemplate(context: RevenueCalendarTemplateContext): string {
+    const printedAt = this.escapeHtml(context.printedAt);
+    const printedBy = this.escapeHtml(context.printedBy);
+
+    return `
+      <div style="width:100%; padding:0 26px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#394150;">
+        <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+          <div style="width:33%; line-height:1.45;">
+            <div>${printedAt}</div>
+            <div>${printedBy}</div>
+          </div>
+          <div style="width:34%; text-align:center; font-size:11px;">
+            Page <span class="pageNumber"></span> of <span class="totalPages"></span>
+          </div>
+          <div style="width:33%;"></div>
+        </div>
+      </div>
+    `;
+  }
+
+  private escapeHtml(value: string): string {
+    return value.replace(/[&<>"']/g, (match) => {
+      switch (match) {
+        case '&':
+          return '&amp;';
+        case '<':
+          return '&lt;';
+        case '>':
+          return '&gt;';
+        case '"':
+          return '&quot;';
+        case "'":
+          return '&#39;';
+        default:
+          return match;
+      }
+    });
+  }
+
+  private formatPrintedAt(date: Date): string {
+    return new Intl.DateTimeFormat('es-MX', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
   }
 }

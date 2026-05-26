@@ -14,6 +14,7 @@ import { BaseChartDirective } from 'ng2-charts';
 import { catchError, forkJoin, map, of } from 'rxjs';
 import { DateRange } from '../../core/models/date-range.model';
 import { ReportResponse } from '../../core/models/report.model';
+import { ReportsApiService } from '../../core/services/reports-api.service';
 import { ReportsService } from '../../core/services/reports.service';
 import { DateRangeFilterComponent } from '../../shared/components/date-range-filter/date-range-filter.component';
 
@@ -209,6 +210,7 @@ export class ReportsPageComponent {
 
   constructor(
     private readonly reportsService: ReportsService,
+    private readonly reportsApiService: ReportsApiService,
     private readonly snackBar: MatSnackBar
   ) {
     this.loadReports(this.dateRange());
@@ -292,8 +294,19 @@ export class ReportsPageComponent {
     this.exportTableAsCsv(table, `${this.selectedReport()}-secondary`);
   }
 
-  onPrintReport(): void {
-    window.print();
+  abrirRevenueCalendarPdf(id: string): void {
+    this.reportsApiService.obtenerRevenueCalendarPdf(id).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank', 'noopener,noreferrer');
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      },
+      error: () => {
+        this.snackBar.open('No fue posible abrir el PDF del revenue calendar.', 'Cerrar', {
+          duration: 2600
+        });
+      }
+    });
   }
 
   hasRows(table: TableView | null): boolean {

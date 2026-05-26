@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>{{title}}</title>
+    <style>
+      @page {
+        size: Letter landscape;
+        margin: 26px 26px 68px 26px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #ffffff;
+        color: #1d2733;
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      body {
+        padding: 6px 0 0;
+      }
+
+      .report-shell {
+        width: 100%;
+      }
+
+      .report-header {
+        display: grid;
+        grid-template-columns: 1fr 1.3fr 1fr;
+        align-items: start;
+        column-gap: 24px;
+        margin-bottom: 56px;
+      }
+
+      .brand-lockup {
+        padding-top: 18px;
+      }
+
+      .brand-mark {
+        font-size: 31px;
+        font-weight: 700;
+        letter-spacing: -0.04em;
+        color: #12243f;
+      }
+
+      .brand-mark span {
+        color: #20b27a;
+      }
+
+      .header-copy {
+        text-align: center;
+      }
+
+      .header-copy h1 {
+        margin: 0;
+        font-size: 46px;
+        font-weight: 500;
+        letter-spacing: -0.03em;
+      }
+
+      .header-copy p {
+        margin: 8px 0 0;
+        font-size: 20px;
+        color: #3f4956;
+      }
+
+      .header-range {
+        padding-top: 26px;
+        text-align: right;
+      }
+
+      .header-range .label {
+        display: block;
+        margin-bottom: 6px;
+        color: #7c8795;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+      }
+
+      .header-range strong {
+        font-size: 22px;
+        font-weight: 500;
+      }
+
+      .table-frame {
+        width: 100%;
+        border-left: 2px solid #d7dde6;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+      }
+
+      thead {
+        display: table-header-group;
+      }
+
+      tbody {
+        display: table-row-group;
+      }
+
+      tr {
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+
+      th {
+        padding: 20px 22px 18px;
+        color: #5f6975;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-align: left;
+        text-transform: uppercase;
+      }
+
+      td {
+        padding: 26px 22px;
+        border-top: 1px solid #dfe5ec;
+        color: #1d2733;
+        font-size: 13px;
+        line-height: 1.35;
+        vertical-align: middle;
+      }
+
+      tbody tr:first-child td {
+        background: #f2f4f7;
+      }
+
+      .gap-cell {
+        font-weight: 700;
+      }
+
+      .gap-negative {
+        color: #27886f;
+      }
+
+      .gap-positive {
+        color: #d55835;
+      }
+
+      .gap-meta {
+        display: block;
+        margin-top: 4px;
+        color: #7c8795;
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .col-date {
+        width: 11%;
+      }
+
+      .col-dow,
+      .col-dta,
+      .col-pu7d,
+      .col-rank {
+        width: 7%;
+      }
+
+      .col-occ,
+      .col-adr,
+      .col-gap {
+        width: 9%;
+      }
+
+      .col-revenue,
+      .col-tarifa,
+      .col-comp {
+        width: 11%;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="report-shell">
+      <header class="report-header">
+        <div class="brand-lockup">
+          <div class="brand-mark">Rev<span>Sight</span></div>
+        </div>
+
+        <div class="header-copy">
+          <h1>{{title}}</h1>
+          <p>{{hotelName}}</p>
+        </div>
+
+        <div class="header-range">
+          <span class="label">Date range</span>
+          <strong>{{dateRange}}</strong>
+        </div>
+      </header>
+
+      <section class="table-frame">
+        <table>
+          <thead>
+            <tr>
+              <th class="col-date">FECHA</th>
+              <th class="col-dow">DOW</th>
+              <th class="col-dta">DTA</th>
+              <th class="col-occ">OCC</th>
+              <th class="col-pu7d">PU 7D</th>
+              <th class="col-adr">ADR</th>
+              <th class="col-revenue">REVENUE</th>
+              <th class="col-tarifa">TARIFA</th>
+              <th class="col-comp">COMP SET</th>
+              <th class="col-gap">GAP</th>
+              <th class="col-rank">RANK</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each rows}}
+              <tr class="{{#if (isFirstRow @index)}}first-row{{/if}}">
+                <td>{{date}}</td>
+                <td>{{dow}}</td>
+                <td>{{dta}}</td>
+                <td>{{percent occ}}</td>
+                <td>{{pu7d}}</td>
+                <td>{{money adr}}</td>
+                <td>{{money revenue}}</td>
+                <td>{{money tarifa}}</td>
+                <td>{{money compSet}}</td>
+                <td class="gap-cell {{gapClass gap}}">
+                  {{percent gap}}
+                  <span class="gap-meta">{{gapRank}}</span>
+                </td>
+                <td>{{rank}}</td>
+              </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </body>
+</html>

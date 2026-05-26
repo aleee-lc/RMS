@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { of } from 'rxjs';
 import { vi } from 'vitest';
+import { ReportsApiService } from '../../core/services/reports-api.service';
 import { ReportsService } from '../../core/services/reports.service';
 import { ReportsPageComponent } from './reports-page.component';
 
@@ -43,11 +44,19 @@ describe('ReportsPageComponent', () => {
     getCrsReconciliationReport: vi.fn(() => of(mockGenericReport))
   };
 
+  const reportsApiServiceMock = {
+    obtenerRevenueCalendarPdf: vi.fn(() => of(new Blob()))
+  };
+
   beforeEach(async () => {
     vi.clearAllMocks();
     await TestBed.configureTestingModule({
       imports: [ReportsPageComponent],
-      providers: [provideNoopAnimations(), { provide: ReportsService, useValue: reportsServiceMock }]
+      providers: [
+        provideNoopAnimations(),
+        { provide: ReportsService, useValue: reportsServiceMock },
+        { provide: ReportsApiService, useValue: reportsApiServiceMock }
+      ]
     }).compileComponents();
   });
 

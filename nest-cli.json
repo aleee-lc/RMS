@@ -4,6 +4,6 @@
   "sourceRoot": "src",
   "compilerOptions": {
     "deleteOutDir": true,
-    "assets": ["src/reports/templates/**/*"]
+    "assets": ["reports/templates/**/*"]
   }
 }

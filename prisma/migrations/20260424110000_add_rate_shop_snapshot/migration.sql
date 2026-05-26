@@ -1,4 +1,4 @@
-﻿-- CreateTable
+-- CreateTable
 CREATE TABLE "RateShopSnapshot" (
     "id" SERIAL NOT NULL,
     "hotelId" INTEGER NOT NULL,

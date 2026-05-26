@@ -63,6 +63,7 @@ export class ReportsService {
     try {
       const html = await this.renderRevenueCalendarTemplate(context);
       const executablePath = await this.resolveChromiumExecutablePath();
+      this.logger.log(`PDF: launching Puppeteer${executablePath ? ` with executablePath=${executablePath}` : ' (auto-detect)'}`);
       const browser = await puppeteer.launch({
         headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
@@ -88,13 +89,14 @@ export class ReportsService {
           printBackground: true
         });
 
+        this.logger.log(`PDF: Puppeteer generated ${pdf.byteLength} bytes for id=${id}`);
         return Buffer.from(pdf);
       } finally {
         await browser.close();
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Revenue calendar PDF generation failed: ${message}`);
+      this.logger.error(`PDF: Puppeteer failed for id=${id}, using fallback renderer. Reason: ${message}`);
       return this.buildFallbackRevenueCalendarPdf(context);
     }
   }

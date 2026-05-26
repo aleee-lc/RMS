@@ -48,7 +48,10 @@ export class GoogleHotelsPublicScraper implements RateShoppingScraper {
 
   async scrape(input: RateShoppingSearchInput): Promise<RawRateShoppingResult[]> {
     const playwright = await this.loadPlaywright();
-    const browser = await playwright.chromium.launch({ headless: true });
+    const browser = await playwright.chromium.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+    });
 
     try {
       const context = await browser.newContext({
@@ -147,10 +150,9 @@ export class GoogleHotelsPublicScraper implements RateShoppingScraper {
         await context.close();
       }
     } catch (error) {
-      this.logger.warn(
-        `Failed scraping Google Hotels for "${input.targetHotelName}" (${input.city}): ${this.errorMessage(error)}`
-      );
-      return [];
+      const message = this.errorMessage(error);
+      this.logger.warn(`Failed scraping Google Hotels for "${input.targetHotelName}" (${input.city}): ${message}`);
+      throw new Error(`Google Hotels scraping failed for "${input.targetHotelName}": ${message}`);
     } finally {
       await browser.close();
     }

@@ -9,6 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { HttpErrorResponse } from '@angular/common/http';
 import { catchError, forkJoin, of } from 'rxjs';
 import { BiExecutiveSummaryResponse, RevenueCalendarItem } from '../../core/models/bi.model';
 import { DateRange } from '../../core/models/date-range.model';
@@ -148,9 +149,10 @@ export class RevenueIntelligencePageComponent {
             duration: 2400
           });
         },
-        error: () => {
+        error: (error: HttpErrorResponse) => {
           this.rateShopRefreshing.set(false);
-          this.snackBar.open('No fue posible correr el rate shopper.', 'Cerrar', {
+          const message = this.resolveRateShopError(error);
+          this.snackBar.open(message, 'Cerrar', {
             duration: 2600
           });
         }
@@ -213,5 +215,20 @@ export class RevenueIntelligencePageComponent {
     const date = new Date(`${dateIso}T00:00:00`);
     date.setDate(date.getDate() + 1);
     return formatDateISO(date);
+  }
+
+  private resolveRateShopError(error: HttpErrorResponse): string {
+    if (error.error && typeof error.error === 'object' && 'message' in error.error) {
+      const message = error.error.message;
+      if (typeof message === 'string' && message.trim()) {
+        return message;
+      }
+    }
+
+    if (typeof error.error === 'string' && error.error.trim()) {
+      return error.error;
+    }
+
+    return 'No fue posible correr el rate shopper.';
   }
 }

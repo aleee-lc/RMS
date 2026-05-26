@@ -1162,47 +1162,60 @@ export class ReportsService {
   private buildFallbackRevenueCalendarPdf(context: RevenueCalendarTemplateContext): Buffer {
     const width = 792;
     const height = 612;
-    const margin = 42;
+    const margin = 44;
     const contentLines: string[] = [];
     const title = context.title;
-    const titleSize = 34;
-    const subtitleSize = 16;
-    const bodySize = 10;
-    const headerTop = height - 72;
-    const tableTop = height - 190;
-    const rowHeight = 40;
-    const tableLeft = 118;
-    const tableRight = width - 48;
+    const titleSize = 32;
+    const subtitleSize = 15;
+    const bodySize = 9;
+    const headerTop = height - 68;
+    const tableTop = height - 172;
+    const rowHeight = 46;
+    const tableLeft = 104;
+    const tableRight = width - 52;
     const columns = [
-      { key: 'date', label: 'FECHA', width: 76 },
-      { key: 'dow', label: 'DOW', width: 50 },
-      { key: 'dta', label: 'DTA', width: 40 },
-      { key: 'occ', label: 'OCC', width: 54 },
-      { key: 'pu7d', label: 'PU 7D', width: 54 },
-      { key: 'adr', label: 'ADR', width: 72 },
-      { key: 'revenue', label: 'REVENUE', width: 86 },
-      { key: 'tarifa', label: 'TARIFA', width: 78 },
-      { key: 'compSet', label: 'COMP SET', width: 86 },
-      { key: 'gap', label: 'GAP', width: 56 },
-      { key: 'rank', label: 'RANK', width: 44 }
+      { key: 'date', label: 'FECHA', width: 72 },
+      { key: 'dow', label: 'DOW', width: 38 },
+      { key: 'dta', label: 'DTA', width: 30 },
+      { key: 'occ', label: 'OCC', width: 48 },
+      { key: 'pu7d', label: 'PU 7D', width: 42 },
+      { key: 'adr', label: 'ADR', width: 62 },
+      { key: 'revenue', label: 'REVENUE', width: 76 },
+      { key: 'tarifa', label: 'TARIFA', width: 72 },
+      { key: 'compSet', label: 'COMP SET', width: 78 },
+      { key: 'gap', label: 'GAP', width: 54 },
+      { key: 'rank', label: 'RANK', width: 34 }
     ] as const;
 
     const centerX = width / 2;
     const titleX = centerX - this.approxPdfTextWidth(title, titleSize) / 2;
     const hotelNameX = centerX - this.approxPdfTextWidth(context.hotelName, subtitleSize) / 2;
-    const dateRangeX = width - 150;
+    const dateRangeLabel = 'Date Range';
+    const dateRangeLabelX = width - 154;
+    const dateRangeValueX = width - 154;
 
-    contentLines.push(this.pdfText('Rev', margin, headerTop + 4, 28, 'F2', '0.08 0.15 0.27'));
-    contentLines.push(this.pdfText('Sight', margin + 32, headerTop + 4, 28, 'F2', '0.13 0.68 0.48'));
-    contentLines.push(this.pdfText(title, titleX, headerTop + 10, titleSize, 'F1', '0.13 0.13 0.14'));
-    contentLines.push(this.pdfText(context.hotelName, hotelNameX, headerTop - 18, subtitleSize, 'F1', '0.22 0.22 0.24'));
-    contentLines.push(this.pdfText('Date Range', dateRangeX, headerTop - 16, 14, 'F1', '0.22 0.22 0.24'));
-    contentLines.push(this.pdfLine(tableLeft, tableTop + 54, tableLeft, 92, '0.81 0.84 0.88', 1));
+    contentLines.push(this.pdfText('Rev', margin, headerTop + 4, 22, 'F2', '0.08 0.15 0.27'));
+    contentLines.push(this.pdfText('Sight', margin + 25, headerTop + 4, 22, 'F2', '0.13 0.68 0.48'));
+    contentLines.push(
+      this.pdfText(title, titleX, headerTop + 10, titleSize, 'F1', '0.13 0.13 0.14')
+    );
+    contentLines.push(
+      this.pdfText(context.hotelName, hotelNameX, headerTop - 16, subtitleSize, 'F1', '0.22 0.22 0.24')
+    );
+    contentLines.push(
+      this.pdfText(dateRangeLabel, dateRangeLabelX, headerTop - 12, 13, 'F1', '0.22 0.22 0.24')
+    );
+    contentLines.push(
+      this.pdfText(context.dateRange, dateRangeValueX, headerTop - 30, 10, 'F1', '0.42 0.45 0.49')
+    );
+    contentLines.push(
+      this.pdfLine(tableLeft, tableTop + 52, tableLeft, tableTop - context.rows.length * rowHeight - 8, '0.84 0.86 0.9', 1)
+    );
 
     let currentX = tableLeft + 12;
     for (const column of columns) {
       contentLines.push(
-        this.pdfText(column.label, currentX, tableTop + 18, 10, 'F1', '0.39 0.42 0.46')
+        this.pdfText(column.label, currentX, tableTop + 18, 8, 'F1', '0.39 0.42 0.46')
       );
       currentX += column.width;
     }
@@ -1220,7 +1233,7 @@ export class ReportsService {
       );
 
       let cellX = tableLeft + 12;
-      const baseline = rowTop - 22;
+      const baseline = rowTop - 20;
       const valueColor = '0.15 0.16 0.17';
       const gapColor = row.gap > 0 ? '0.84 0.34 0.21' : '0.17 0.54 0.44';
       const rowValues = [
@@ -1241,15 +1254,15 @@ export class ReportsService {
         const color = valueIndex === 9 ? gapColor : valueColor;
         contentLines.push(this.pdfText(value, cellX, baseline, bodySize, 'F2', color));
         if (valueIndex === 9) {
-          contentLines.push(this.pdfText(row.gapRank, cellX, baseline - 11, 8, 'F1', '0.49 0.52 0.57'));
+          contentLines.push(this.pdfText(row.gapRank, cellX, baseline - 10, 7, 'F1', '0.49 0.52 0.57'));
         }
         cellX += columns[valueIndex].width;
       });
     });
 
-    contentLines.push(this.pdfText(context.printedAt, margin, 54, 10, 'F1', '0.2 0.2 0.22'));
-    contentLines.push(this.pdfText(context.printedBy, margin, 38, 10, 'F1', '0.2 0.2 0.22'));
-    contentLines.push(this.pdfText('Page 1 of 1', centerX - 28, 34, 12, 'F1', '0.2 0.2 0.22'));
+    contentLines.push(this.pdfText(context.printedAt, margin, 54, 9, 'F1', '0.2 0.2 0.22'));
+    contentLines.push(this.pdfText(context.printedBy, margin, 38, 9, 'F1', '0.2 0.2 0.22'));
+    contentLines.push(this.pdfText('Page 1 of 1', centerX - 30, 34, 11, 'F1', '0.2 0.2 0.22'));
 
     const content = contentLines.join('\n');
     const objects = [

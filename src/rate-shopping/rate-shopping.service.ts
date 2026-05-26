@@ -87,6 +87,7 @@ export class RateShoppingService {
 
     const targetResults: TargetExecutionResult[] = [];
     const normalizedRowsAllTargets: NormalizedRateShoppingResult[] = [];
+    let successfulTargets = 0;
 
     for (const targetName of uniqueTargets) {
       const searchInput: RateShoppingSearchInput = {
@@ -100,10 +101,21 @@ export class RateShoppingService {
       const execution = await this.executeTarget(searchInput);
       targetResults.push(execution.result);
       normalizedRowsAllTargets.push(...execution.normalizedRows);
+      if (execution.result.bestOffer || execution.result.rawRows > 0 || execution.result.normalizedRows > 0) {
+        successfulTargets += 1;
+      }
 
       if (this.targetDelayMs > 0) {
         await this.sleep(this.targetDelayMs);
       }
+    }
+
+    if (successfulTargets === 0) {
+      const details = targetResults
+        .flatMap((target) => target.scraperErrors)
+        .filter(Boolean)
+        .join(' | ');
+      throw new Error(details || 'Rate shopping did not return any public rates.');
     }
 
     if (normalizedRowsAllTargets.length > 0) {

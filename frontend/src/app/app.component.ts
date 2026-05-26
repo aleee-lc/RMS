@@ -38,7 +38,8 @@ export class AppComponent {
     {
       label: 'Command',
       items: [
-        { label: 'Revenue Command Center', icon: 'monitoring', path: '/revenue-intelligence' },
+        { label: 'Revenue Command', icon: 'monitoring', path: '/revenue-command' },
+        { label: 'Revenue Calendar', icon: 'calendar_view_month', path: '/revenue-calendar' },
       ],
     },
     {

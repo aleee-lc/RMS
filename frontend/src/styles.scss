@@ -379,3 +379,25 @@ a:hover {
     padding: 14px !important;
   }
 }
+
+@media print {
+  .sidebar,
+  .mobile-menu-button,
+  .pin-button {
+    display: none !important;
+  }
+
+  .app-shell,
+  .app-shell:has(.sidebar:hover),
+  .app-shell:has(.sidebar.pinned) {
+    grid-template-columns: 1fr !important;
+  }
+
+  .content {
+    padding: 0 !important;
+  }
+
+  body {
+    background: #fff !important;
+  }
+}

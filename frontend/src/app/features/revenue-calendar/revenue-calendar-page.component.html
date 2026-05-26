@@ -1,0 +1,270 @@
+<section class="page revenue-calendar-page">
+  <header class="calendar-hero">
+    <div class="hero-copy">
+      <span class="eyebrow">Revenue Calendar</span>
+      <h1>Revenue Calendar</h1>
+      <p>
+        Detalle diario de performance, ranking competitivo y accion sugerida para imprimir o
+        revisar con direccion.
+      </p>
+    </div>
+
+    <div class="hero-actions print-hidden">
+      <button mat-stroked-button type="button" (click)="onApplyQuickRange(7)" [disabled]="loading()">
+        <mat-icon>calendar_month</mat-icon>
+        7 dias
+      </button>
+      <button mat-stroked-button type="button" (click)="onApplyQuickRange(30)" [disabled]="loading()">
+        <mat-icon>date_range</mat-icon>
+        30 dias
+      </button>
+      <button mat-flat-button type="button" (click)="onPrint()" [disabled]="loading()">
+        <mat-icon>{{ printing() ? 'hourglass_empty' : 'print' }}</mat-icon>
+        {{ printing() ? 'Imprimiendo' : 'Imprimir' }}
+      </button>
+    </div>
+  </header>
+
+  <section class="toolbar-panel print-hidden">
+    <app-date-range-filter
+      [startDate]="dateRange().startDate"
+      [endDate]="dateRange().endDate"
+      [disabled]="loading()"
+      mode="future"
+      [showPresets]="false"
+      (applyDateRange)="onDateRangeApply($event)"
+    />
+
+    <div class="toolbar-meta">
+      <div class="meta-pill">
+        <span>Rango</span>
+        <strong>{{ dateRange().startDate }} - {{ dateRange().endDate }}</strong>
+      </div>
+      <div class="meta-pill">
+        <span>Datos</span>
+        <strong>{{ freshnessLabel() }}</strong>
+      </div>
+      <div class="export-actions">
+        <button
+          mat-stroked-button
+          type="button"
+          (click)="onExportCsv()"
+          [disabled]="loading() || exporting() !== null"
+        >
+          <mat-icon>{{ isExporting('csv') ? 'hourglass_empty' : 'download' }}</mat-icon>
+          CSV
+        </button>
+        <button
+          mat-stroked-button
+          type="button"
+          (click)="onExportPdf()"
+          [disabled]="loading() || exporting() !== null"
+        >
+          <mat-icon>{{ isExporting('pdf') ? 'hourglass_empty' : 'picture_as_pdf' }}</mat-icon>
+          PDF
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <mat-progress-bar *ngIf="loading()" mode="indeterminate" class="print-hidden" />
+
+  <div class="state-card print-hidden" *ngIf="errorMessage() as error"><strong>Error:</strong> {{ error }}</div>
+
+  <div class="calendar-layout">
+    <section class="calendar-table-panel section-card">
+      <div class="panel-heading">
+        <div>
+          <span class="panel-kicker">Tabla diaria</span>
+          <h2>Revenue detail by date</h2>
+        </div>
+      </div>
+
+      <div class="table-wrap" *ngIf="calendar().length; else emptyState">
+        <table mat-table [dataSource]="calendar()" class="full-width data-table calendar-table">
+          <ng-container matColumnDef="date">
+            <th mat-header-cell *matHeaderCellDef>Fecha</th>
+            <td mat-cell *matCellDef="let row"><strong>{{ row.date }}</strong></td>
+          </ng-container>
+
+          <ng-container matColumnDef="dow">
+            <th mat-header-cell *matHeaderCellDef>DOW</th>
+            <td mat-cell *matCellDef="let row">{{ dayOfWeek(row.date) }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="arrival">
+            <th mat-header-cell *matHeaderCellDef>DTA</th>
+            <td mat-cell *matCellDef="let row">{{ row.daysToArrival }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="occupancy">
+            <th mat-header-cell *matHeaderCellDef>Occ</th>
+            <td mat-cell *matCellDef="let row">
+              {{ row.occupancy === null ? '-' : (row.occupancy | number: '1.1-1') + '%' }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="pickup">
+            <th mat-header-cell *matHeaderCellDef>PU 7d</th>
+            <td mat-cell *matCellDef="let row">{{ row.pickup.rooms7d }}</td>
+          </ng-container>
+
+          <ng-container matColumnDef="adr">
+            <th mat-header-cell *matHeaderCellDef>ADR</th>
+            <td mat-cell *matCellDef="let row">
+              {{ row.adr === null ? '-' : (row.adr | currency: 'MXN' : 'symbol' : '1.0-0') }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="revenue">
+            <th mat-header-cell *matHeaderCellDef>Revenue</th>
+            <td mat-cell *matCellDef="let row">
+              {{
+                row.revenue === null ? '-' : (row.revenue | currency: 'MXN' : 'symbol' : '1.0-0')
+              }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="price">
+            <th mat-header-cell *matHeaderCellDef>Tarifa</th>
+            <td mat-cell *matCellDef="let row">
+              {{
+                row.market.yourPrice === null
+                  ? '-'
+                  : (row.market.yourPrice | currency: 'MXN' : 'symbol' : '1.0-0')
+              }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="marketAverage">
+            <th mat-header-cell *matHeaderCellDef>Comp set</th>
+            <td mat-cell *matCellDef="let row">
+              {{
+                row.market.marketAverage === null
+                  ? '-'
+                  : (row.market.marketAverage | currency: 'MXN' : 'symbol' : '1.0-0')
+              }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="gap">
+            <th mat-header-cell *matHeaderCellDef>Gap</th>
+            <td mat-cell *matCellDef="let row">
+              <app-market-position-cell
+                [gapPct]="row.market.gapPct"
+                [rank]="row.market.rank"
+                [rankTotal]="row.market.rankTotal"
+              />
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="rank">
+            <th mat-header-cell *matHeaderCellDef>Rank</th>
+            <td mat-cell *matCellDef="let row">
+              {{ row.market.rank ? row.market.rank + '/' + row.market.rankTotal : '-' }}
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr
+            mat-row
+            *matRowDef="let row; columns: displayedColumns"
+            [class.active-row]="selectedDate()?.date === row.date"
+            (click)="onSelectRow(row)"
+          ></tr>
+        </table>
+      </div>
+    </section>
+
+    <aside class="date-panel section-card" *ngIf="selectedDate() as selected">
+      <div class="panel-heading">
+        <div>
+          <span class="panel-kicker">Date Intelligence</span>
+          <h2>{{ pageTitle() }}</h2>
+          <p>{{ selected.recommendation.label }}</p>
+        </div>
+      </div>
+
+      <div class="action-banner" [class.risk]="selected.riskScore >= selected.opportunityScore">
+        <span>Accion sugerida</span>
+        <strong>{{ selected.recommendation.label }}</strong>
+        <p>{{ selected.recommendation.reason }}</p>
+      </div>
+
+      <div class="metric-grid">
+        <div>
+          <span>Ocupacion</span>
+          <strong>{{
+            selected.occupancy === null ? '-' : (selected.occupancy | number: '1.1-1') + '%'
+          }}</strong>
+        </div>
+        <div>
+          <span>Pickup 7d</span>
+          <strong>{{ selected.pickup.rooms7d }}</strong>
+        </div>
+        <div>
+          <span>Tu tarifa</span>
+          <strong>{{
+            selected.market.yourPrice === null
+              ? '-'
+              : (selected.market.yourPrice | currency: 'MXN' : 'symbol' : '1.0-0')
+          }}</strong>
+        </div>
+        <div>
+          <span>Comp set</span>
+          <strong>{{
+            selected.market.marketAverage === null
+              ? '-'
+              : (selected.market.marketAverage | currency: 'MXN' : 'symbol' : '1.0-0')
+          }}</strong>
+        </div>
+        <div>
+          <span>Revenue</span>
+          <strong>{{
+            selected.revenue === null ? '-' : (selected.revenue | currency: 'MXN' : 'symbol' : '1.0-0')
+          }}</strong>
+        </div>
+        <div>
+          <span>Impacto est.</span>
+          <strong>{{
+            selected.recommendation.estimatedImpact | currency: 'MXN' : 'symbol' : '1.0-0'
+          }}</strong>
+        </div>
+      </div>
+
+      <div class="score-stack">
+        <div>
+          <span>Opportunity</span>
+          <app-score-bar [value]="selected.opportunityScore" tone="opportunity" />
+        </div>
+        <div>
+          <span>Risk</span>
+          <app-score-bar [value]="selected.riskScore" tone="risk" />
+        </div>
+      </div>
+
+      <section class="detail-block">
+        <h3>Evidencia</h3>
+        <ul>
+          <li *ngFor="let item of selected.recommendation.evidence">{{ item }}</li>
+        </ul>
+      </section>
+
+      <section class="detail-block" *ngIf="selected.signals.length">
+        <h3>Senales</h3>
+        <div class="signal-stack">
+          <article *ngFor="let signal of selected.signals">
+            <app-signal-badge [label]="signal.title" [severity]="signal.severity" />
+            <p>{{ signal.message }}</p>
+          </article>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <ng-template #emptyState>
+    <div class="state-card">
+      <strong>No hay fechas para el rango seleccionado.</strong> Ajusta el rango y vuelve a intentar.
+    </div>
+  </ng-template>
+</section>

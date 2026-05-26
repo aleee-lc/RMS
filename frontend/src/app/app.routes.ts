@@ -3,6 +3,7 @@ import { AlertsPageComponent } from './features/alerts/alerts-page.component';
 import { ConfigurationPageComponent } from './features/configuration/configuration-page.component';
 import { RecommendationsPageComponent } from './features/recommendations/recommendations-page.component';
 import { ReportsPageComponent } from './features/reports/reports-page.component';
+import { RevenueCalendarPageComponent } from './features/revenue-calendar/revenue-calendar-page.component';
 import { RevenueIntelligencePageComponent } from './features/revenue-intelligence/revenue-intelligence-page.component';
 import { UploadPageComponent } from './features/upload/upload-page.component';
 import { LandingPageComponent } from './features/landing/landing-page.component';
@@ -30,7 +31,11 @@ export const routes: Routes = [
   },
   {
     path: 'dashboard',
-    redirectTo: 'revenue-intelligence',
+    redirectTo: 'revenue-command',
+  },
+  {
+    path: 'revenue-intelligence',
+    redirectTo: 'revenue-command',
   },
   {
     path: 'upload',
@@ -45,9 +50,15 @@ export const routes: Routes = [
     canActivate: [authGuard],
   },
   {
-    path: 'revenue-intelligence',
+    path: 'revenue-command',
     component: RevenueIntelligencePageComponent,
-    title: 'RevSight | Revenue Intelligence',
+    title: 'RevSight | Revenue Command',
+    canActivate: [authGuard],
+  },
+  {
+    path: 'revenue-calendar',
+    component: RevenueCalendarPageComponent,
+    title: 'RevSight | Revenue Calendar',
     canActivate: [authGuard],
   },
   {
@@ -70,6 +81,6 @@ export const routes: Routes = [
   },
   {
     path: '**',
-    redirectTo: 'revenue-intelligence',
+    redirectTo: 'revenue-command',
   },
 ];

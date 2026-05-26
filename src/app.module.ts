@@ -13,6 +13,7 @@ import { CompetitorsModule } from './competitors/competitors.module';
 import { RateShoppingModule } from './rate-shopping/rate-shopping.module';
 import { BiModule } from './bi/bi.module';
 import { AuthModule } from './auth/auth.module';
+import { ExecutiveModule } from './executive/executive.module';
 
 @Module({
   imports: [
@@ -29,7 +30,8 @@ import { AuthModule } from './auth/auth.module';
     HotelsModule,
     CompetitorsModule,
     RateShoppingModule,
-    BiModule
+    BiModule,
+    ExecutiveModule
   ]
 })
 export class AppModule {}

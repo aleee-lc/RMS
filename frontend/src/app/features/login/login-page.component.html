@@ -1,19 +1,54 @@
-<section class="login-page">
-  <mat-card class="login-card">
-    <div class="login-brand">
-      <img src="/revsight-logo.svg" alt="RevSight" />
+<div class="login-shell">
+
+  <!-- ── Left: Brand panel ───────────────────────────── -->
+  <aside class="brand-panel" aria-hidden="true">
+    <div class="brand-inner">
+      <span class="brand-wordmark">RevSight</span>
+
+      <div class="brand-copy">
+        <h1>Revenue intelligence que responde al ritmo real de tu hotel.</h1>
+        <p>
+          Convierte ocupación, pickup y competencia en señales visuales
+          para decidir precio con menos intuición y más evidencia.
+        </p>
+      </div>
+
+      <ul class="brand-metrics">
+        <li>
+          <strong>+18%</strong>
+          <span>RevPAR objetivo</span>
+        </li>
+        <li>
+          <strong>24/7</strong>
+          <span>Señales activas</span>
+        </li>
+        <li>
+          <strong>360°</strong>
+          <span>Vista competitiva</span>
+        </li>
+      </ul>
     </div>
+  </aside>
 
-    <mat-card-header>
-      <mat-card-title>RevSight</mat-card-title>
-      <mat-card-subtitle>Acceso al Revenue Command Center</mat-card-subtitle>
-    </mat-card-header>
+  <!-- ── Right: Form panel ──────────────────────────── -->
+  <main class="form-panel">
+    <div class="form-inner">
 
-    <mat-card-content>
-      <mat-progress-bar *ngIf="loading()" mode="indeterminate" />
+      <img src="/revsight-logo.svg" alt="RevSight" class="form-logo" />
+
+      <div class="form-heading">
+        <span class="form-eyebrow">Revenue Command Center</span>
+        <h2>Acceso al sistema</h2>
+      </div>
+
+      <mat-progress-bar
+        *ngIf="loading()"
+        mode="indeterminate"
+        class="login-progress"
+      />
 
       <form class="login-form" (ngSubmit)="onSubmit()">
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" class="rs-field">
           <mat-label>Email</mat-label>
           <input
             matInput
@@ -25,8 +60,8 @@
           />
         </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Password</mat-label>
+        <mat-form-field appearance="outline" class="rs-field">
+          <mat-label>Contraseña</mat-label>
           <input
             matInput
             type="password"
@@ -37,13 +72,18 @@
           />
         </mat-form-field>
 
-        <div class="state-card" *ngIf="error() as message">{{ message }}</div>
+        <div class="error-message" *ngIf="error() as message">
+          <mat-icon>warning_amber</mat-icon>
+          {{ message }}
+        </div>
 
-        <button mat-flat-button color="primary" type="submit" [disabled]="loading()">
-          <mat-icon>login</mat-icon>
-          Entrar
+        <button mat-flat-button color="primary" type="submit" [disabled]="loading()" class="submit-btn">
+          Entrar al sistema
+          <mat-icon>arrow_forward</mat-icon>
         </button>
       </form>
-    </mat-card-content>
-  </mat-card>
-</section>
+
+    </div>
+  </main>
+
+</div>

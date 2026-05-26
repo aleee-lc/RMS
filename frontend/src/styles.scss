@@ -2,8 +2,8 @@
 
 @include mat.core();
 
-$primary-palette: mat.m2-define-palette(mat.$m2-teal-palette, 700, 500, 900);
-$accent-palette: mat.m2-define-palette(mat.$m2-blue-palette, 700, 500, 900);
+$primary-palette: mat.m2-define-palette(mat.$m2-blue-grey-palette, 900, 700, 200);
+$accent-palette: mat.m2-define-palette(mat.$m2-teal-palette, 800, 600, 200);
 $warn-palette: mat.m2-define-palette(mat.$m2-red-palette, 700);
 
 $theme: mat.m2-define-light-theme(
@@ -20,41 +20,60 @@ $theme: mat.m2-define-light-theme(
 @include mat.all-component-themes($theme);
 
 :root {
-  --font-base: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Hanken Grotesk', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-base: var(--font-sans);
   --font-mono: 'JetBrains Mono', 'Consolas', monospace;
 
-  --bg-canvas: #f8fafc;
-  --bg-page: #f5faf8;
+  // Design system surface tokens
+  --bg-canvas: #f7fafb;
+  --bg-page: #f1f4f5;
   --bg-panel: #ffffff;
-  --bg-panel-soft: #f0f5f2;
-  --bg-highlight: #ecfdf5;
-  --bg-muted: #f1f5f9;
+  --bg-panel-soft: #ebeeef;
+  --bg-highlight: #c1ecd4;
+  --bg-muted: #e6e9ea;
 
-  --text-strong: #0f172a;
-  --text-main: #171d1c;
-  --text-soft: #3d4947;
-  --text-muted: #64748b;
+  // Text tokens
+  --text-strong: #181c1d;
+  --text-main: #181c1d;
+  --text-soft: #42474b;
+  --text-muted: #72787c;
 
-  --line-soft: #e2e8f0;
-  --line-strong: #bcc9c6;
+  // Border tokens
+  --line-soft: #c2c7cc;
+  --line-strong: #72787c;
 
-  --brand-900: #00201d;
-  --brand-800: #00443e;
-  --brand-700: #00685f;
-  --brand-600: #0d9488;
-  --brand-500: #14b8a6;
-  --accent-700: #0f172a;
-  --accent-600: #2563eb;
-  --tertiary-600: #b05e3d;
+  // Brand / primary — Petroleum Blue
+  --brand-primary: #012535;
+  --brand-primary-dim: #1b3b4b;
+  --brand-primary-container: #1b3b4b;
+  --brand-on-primary-container: #86a5b8;
+  --brand-inverse-primary: #abcbdf;
 
-  --ok-bg: #dcfce7;
-  --ok-text: #166534;
+  // Secondary — Deep Green
+  --brand-secondary: #3f6653;
+  --brand-secondary-container: #beead1;
+  --brand-on-secondary-container: #436b58;
+
+  // Legacy aliases kept for existing components
+  --brand-900: #001e2c;
+  --brand-800: #003849;
+  --brand-700: #012535;
+  --brand-600: #2b4a5b;
+  --brand-500: #446274;
+  --accent-700: #274e3d;
+  --accent-600: #3f6653;
+  --tertiary-600: #474743;
+
+  // Status
+  --ok-bg: #c1ecd4;
+  --ok-text: #274e3d;
   --warn-bg: #fef3c7;
   --warn-text: #92400e;
-  --danger-bg: #fee2e2;
-  --danger-text: #991b1b;
-  --info-bg: #dbeafe;
-  --info-text: #1e3a8a;
+  --danger-bg: #ffdad6;
+  --danger-text: #93000a;
+  --info-bg: #c7e7fc;
+  --info-text: #001e2c;
 
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -63,13 +82,15 @@ $theme: mat.m2-define-light-theme(
   --space-5: 1.25rem;
   --space-6: 1.5rem;
 
-  --radius-sm: 4px;
-  --radius-md: 8px;
+  // Design system: 4px base, max 8px — never exceed for cards
+  --radius-sm: 2px;
+  --radius-md: 4px;
   --radius-lg: 8px;
-  --radius-pill: 999px;
+  --radius-pill: 9999px;
 
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-md: 0 4px 14px rgba(15, 23, 42, 0.08);
+  // Tonal layering — no traditional shadows
+  --shadow-sm: 0 1px 0 rgba(1, 37, 53, 0.06);
+  --shadow-md: 0 2px 0 rgba(1, 37, 53, 0.06);
 }
 
 * {
@@ -136,6 +157,16 @@ mat-card {
   border-radius: var(--radius-md) !important;
   font-weight: 700 !important;
   min-height: 38px;
+}
+
+.submit-btn.mat-primary {
+  --mdc-filled-button-container-color: #012535;
+  --mdc-filled-button-label-text-color: #ffffff;
+  --mdc-filled-button-container-shape: 4px;
+
+  &:hover:not([disabled]) {
+    --mdc-filled-button-container-color: #1b3b4b;
+  }
 }
 
 .mat-mdc-form-field {

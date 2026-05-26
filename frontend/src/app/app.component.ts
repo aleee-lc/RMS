@@ -29,6 +29,7 @@ export class AppComponent {
 
   readonly showShell = signal(true);
   readonly mobileMenuOpen = signal(false);
+  readonly sidebarPinned = signal(localStorage.getItem('revsight_sidebar_pinned') === 'true');
   readonly user = this.auth.user;
   readonly hotels = this.auth.hotels;
   readonly selectedHotelId = this.auth.selectedHotelId;
@@ -75,6 +76,14 @@ export class AppComponent {
 
   toggleMobileMenu(): void {
     this.mobileMenuOpen.update((open) => !open);
+  }
+
+  toggleSidebarPinned(): void {
+    this.sidebarPinned.update((pinned) => {
+      const next = !pinned;
+      localStorage.setItem('revsight_sidebar_pinned', String(next));
+      return next;
+    });
   }
 
   closeMobileMenu(): void {

@@ -1,4 +1,6 @@
 <div class="landing" [style.--page-progress]="scrollProgress()">
+
+  <!-- ── Navigation ──────────────────────────────────── -->
   <header class="landing-nav" aria-label="RevSight">
     <a class="brand" routerLink="/">
       <img src="/revsight-logo.svg" alt="RevSight" />
@@ -6,34 +8,35 @@
     <nav>
       <a href="#platform">Plataforma</a>
       <a href="#workflow">Flujo</a>
-      <a routerLink="/revenue-intelligence" class="nav-cta">Entrar</a>
+      <a routerLink="/login" class="nav-cta">Iniciar sesión</a>
     </nav>
   </header>
 
+  <!-- ── Hero ────────────────────────────────────────── -->
   <section class="hero">
     <div class="hero-copy">
       <span class="eyebrow">Revenue Management BI para hoteles</span>
       <h1>Revenue intelligence que responde al ritmo real de tu hotel.</h1>
       <p>
-        RevSight convierte ocupacion, pickup, tarifas y competencia en senales visuales para decidir
-        precio con menos intuicion y mas evidencia.
+        RevSight convierte ocupación, pickup, tarifas y competencia en señales
+        visuales para decidir precio con menos intuición y más evidencia.
       </p>
       <div class="hero-actions">
-        <a routerLink="/revenue-intelligence" class="primary-action">
+        <a routerLink="/login" class="primary-action">
           Entrar al sistema
           <mat-icon>arrow_forward</mat-icon>
         </a>
-        <a routerLink="/reports" class="secondary-action">Explorar reportes</a>
+        <a href="#platform" class="secondary-action">Ver la plataforma</a>
       </div>
-      <p class="access-note">
-        Acceso temporal directo mientras se define login, roles y permisos.
-      </p>
     </div>
 
     <div class="hero-visual" aria-hidden="true">
-      <div class="dashboard-glass">
-        <div class="glass-top">
-          <span></span><span></span><span></span>
+      <div class="dashboard-card">
+        <div class="card-header">
+          <div class="card-dots">
+            <span></span><span></span><span></span>
+          </div>
+          <span class="card-label">Revenue Command Center</span>
         </div>
         <div class="kpi-strip">
           <div *ngFor="let metric of metrics">
@@ -51,27 +54,34 @@
           <i style="height: 58%"></i>
         </div>
         <div class="decision-row">
-          <span>Subir tarifa</span>
+          <div class="decision-label">
+            <span class="decision-badge">Recomendación</span>
+            <span>Subir tarifa — hab. estándar</span>
+          </div>
           <strong>+8.4%</strong>
         </div>
       </div>
     </div>
   </section>
 
+  <!-- ── Capabilities ────────────────────────────────── -->
   <section class="capabilities" id="platform">
     <div class="section-heading">
       <span>La plataforma</span>
-      <h2>Disenada para revenue managers que necesitan actuar hoy.</h2>
+      <h2>Diseñada para revenue managers que necesitan actuar hoy.</h2>
     </div>
     <div class="capability-grid">
       <article *ngFor="let item of capabilities">
-        <mat-icon>{{ item.icon }}</mat-icon>
+        <div class="capability-icon">
+          <mat-icon>{{ item.icon }}</mat-icon>
+        </div>
         <h3>{{ item.title }}</h3>
         <p>{{ item.text }}</p>
       </article>
     </div>
   </section>
 
+  <!-- ── Scroll story ─────────────────────────────────── -->
   <section class="scroll-story" id="workflow">
     <div class="sticky-device" aria-hidden="true">
       <div class="device-screen">
@@ -79,7 +89,10 @@
         <div class="screen-title">Opportunity Score</div>
         <div class="score-ring">87</div>
         <div class="screen-bars">
-          <span></span><span></span><span></span><span></span>
+          <span style="width: 87%"></span>
+          <span style="width: 62%"></span>
+          <span style="width: 74%"></span>
+          <span style="width: 91%"></span>
         </div>
       </div>
     </div>
@@ -93,12 +106,14 @@
     </div>
   </section>
 
+  <!-- ── Closing CTA ──────────────────────────────────── -->
   <section class="closing">
     <span>Listo para operar</span>
-    <h2>Del dato bruto a una decision tarifaria clara.</h2>
-    <a routerLink="/revenue-intelligence" class="primary-action">
+    <h2>Del dato bruto a una decisión tarifaria clara.</h2>
+    <a routerLink="/login" class="primary-action">
       Entrar al sistema
-      <mat-icon>login</mat-icon>
+      <mat-icon>arrow_forward</mat-icon>
     </a>
   </section>
+
 </div>

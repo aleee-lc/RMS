@@ -5,8 +5,14 @@
 
 .app-shell {
   display: grid;
-  grid-template-columns: 288px minmax(0, 1fr);
+  grid-template-columns: 76px minmax(0, 1fr);
   min-height: 100vh;
+  transition: grid-template-columns 180ms ease;
+}
+
+.app-shell:has(.sidebar:hover),
+.app-shell:has(.sidebar.pinned) {
+  grid-template-columns: 288px minmax(0, 1fr);
 }
 
 .sidebar {
@@ -21,6 +27,10 @@
   position: sticky;
   top: 0;
   z-index: 20;
+  overflow-x: hidden;
+  transition:
+    padding 180ms ease,
+    width 180ms ease;
 }
 
 .brand {
@@ -29,17 +39,20 @@
   gap: 10px;
   align-items: center;
   padding: 0 4px 14px;
+  min-width: 0;
 }
 
 .brand-logo {
   display: block;
   height: auto;
   width: 112px;
+  flex: 0 0 auto;
 }
 
 .brand-copy {
   display: grid;
   gap: 2px;
+  min-width: 0;
 }
 
 .brand-copy strong {
@@ -55,6 +68,12 @@
 
 .mobile-menu-button {
   display: none;
+}
+
+.pin-button {
+  border: 1px solid var(--line-soft);
+  display: inline-flex;
+  justify-self: start;
 }
 
 .hotel-select {
@@ -122,8 +141,66 @@
   padding: 20px 24px 32px;
 }
 
+@media (min-width: 921px) {
+  .sidebar:not(:hover):not(.pinned) {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .sidebar:not(:hover):not(.pinned) .brand {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .sidebar:not(:hover):not(.pinned) .brand-logo {
+    width: 42px;
+  }
+
+  .sidebar:not(:hover):not(.pinned) .brand-copy,
+  .sidebar:not(:hover):not(.pinned) .hotel-select,
+  .sidebar:not(:hover):not(.pinned) .nav-group h2,
+  .sidebar:not(:hover):not(.pinned) .nav-group a span,
+  .sidebar:not(:hover):not(.pinned) .logout-button span {
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+  }
+
+  .sidebar:not(:hover):not(.pinned) .pin-button {
+    justify-self: center;
+  }
+
+  .sidebar:not(:hover):not(.pinned) .side-nav {
+    gap: 10px;
+    justify-items: center;
+  }
+
+  .sidebar:not(:hover):not(.pinned) .nav-group {
+    gap: 10px;
+    justify-items: center;
+  }
+
+  .sidebar:not(:hover):not(.pinned) .nav-group a {
+    justify-content: center;
+    padding: 0;
+    width: 42px;
+  }
+
+  .sidebar:not(:hover):not(.pinned) .logout-button {
+    justify-content: center;
+    padding: 0;
+    width: 42px;
+  }
+}
+
 @media (max-width: 920px) {
   .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .app-shell:has(.sidebar:hover),
+  .app-shell:has(.sidebar.pinned) {
     grid-template-columns: 1fr;
   }
 
@@ -147,6 +224,10 @@
     align-self: center;
     display: inline-flex;
     justify-self: end;
+  }
+
+  .pin-button {
+    display: none;
   }
 
   .sidebar:not(.menu-open) .hotel-select,

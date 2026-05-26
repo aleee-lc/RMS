@@ -1,6 +1,10 @@
 <ng-container *ngIf="showShell(); else publicRoute">
 <div class="app-shell">
-  <aside class="sidebar" [class.menu-open]="mobileMenuOpen()">
+  <aside
+    class="sidebar"
+    [class.menu-open]="mobileMenuOpen()"
+    [class.pinned]="sidebarPinned()"
+  >
     <div class="brand">
       <img class="brand-logo" src="/revsight-logo.svg" alt="RevSight" />
       <div class="brand-copy">
@@ -8,6 +12,16 @@
         <small>{{ user()?.name ?? 'Revenue Management BI' }}</small>
       </div>
     </div>
+
+    <button
+      mat-icon-button
+      class="pin-button"
+      type="button"
+      [attr.aria-label]="sidebarPinned() ? 'Contraer sidebar' : 'Fijar sidebar abierto'"
+      (click)="toggleSidebarPinned()"
+    >
+      <mat-icon>{{ sidebarPinned() ? 'keyboard_double_arrow_left' : 'keyboard_double_arrow_right' }}</mat-icon>
+    </button>
 
     <button mat-icon-button class="mobile-menu-button" type="button" (click)="toggleMobileMenu()">
       <mat-icon>{{ mobileMenuOpen() ? 'close' : 'menu' }}</mat-icon>

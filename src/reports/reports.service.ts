@@ -1160,45 +1160,102 @@ export class ReportsService {
   }
 
   private buildFallbackRevenueCalendarPdf(context: RevenueCalendarTemplateContext): Buffer {
-    const lines = [
-      context.title,
-      context.hotelName,
-      `Rango: ${context.dateRange}`,
-      `Impreso: ${context.printedAt}`,
-      `Usuario: ${context.printedBy}`,
-      '',
-      'FECHA | DOW | DTA | OCC | PU7D | ADR | REVENUE | TARIFA | COMP SET | GAP | RANK',
-      ...context.rows.map(
-        (row) =>
-          `${row.date} | ${row.dow} | ${row.dta} | ${row.occ}% | ${row.pu7d} | MX$${row.adr} | MX$${row.revenue} | MX$${row.tarifa} | MX$${row.compSet} | ${row.gap}% | ${row.rank}`
-      )
-    ];
-
-    return this.assemblePlainPdf(lines);
-  }
-
-  private assemblePlainPdf(lines: string[]): Buffer {
     const width = 792;
     const height = 612;
-    const margin = 36;
-    const lineHeight = 14;
-    let y = height - margin;
+    const margin = 42;
     const contentLines: string[] = [];
+    const title = context.title;
+    const titleSize = 34;
+    const subtitleSize = 16;
+    const bodySize = 10;
+    const headerTop = height - 72;
+    const tableTop = height - 190;
+    const rowHeight = 40;
+    const tableLeft = 118;
+    const tableRight = width - 48;
+    const columns = [
+      { key: 'date', label: 'FECHA', width: 76 },
+      { key: 'dow', label: 'DOW', width: 50 },
+      { key: 'dta', label: 'DTA', width: 40 },
+      { key: 'occ', label: 'OCC', width: 54 },
+      { key: 'pu7d', label: 'PU 7D', width: 54 },
+      { key: 'adr', label: 'ADR', width: 72 },
+      { key: 'revenue', label: 'REVENUE', width: 86 },
+      { key: 'tarifa', label: 'TARIFA', width: 78 },
+      { key: 'compSet', label: 'COMP SET', width: 86 },
+      { key: 'gap', label: 'GAP', width: 56 },
+      { key: 'rank', label: 'RANK', width: 44 }
+    ] as const;
 
-    for (const line of lines) {
-      if (y < margin) {
-        break;
-      }
+    const centerX = width / 2;
+    const titleX = centerX - this.approxPdfTextWidth(title, titleSize) / 2;
+    const hotelNameX = centerX - this.approxPdfTextWidth(context.hotelName, subtitleSize) / 2;
+    const dateRangeX = width - 150;
 
-      contentLines.push(`BT /F1 10 Tf ${margin} ${y} Td (${this.escapePdfText(line)}) Tj ET`);
-      y -= lineHeight;
+    contentLines.push(this.pdfText('Rev', margin, headerTop + 4, 28, 'F2', '0.08 0.15 0.27'));
+    contentLines.push(this.pdfText('Sight', margin + 32, headerTop + 4, 28, 'F2', '0.13 0.68 0.48'));
+    contentLines.push(this.pdfText(title, titleX, headerTop + 10, titleSize, 'F1', '0.13 0.13 0.14'));
+    contentLines.push(this.pdfText(context.hotelName, hotelNameX, headerTop - 18, subtitleSize, 'F1', '0.22 0.22 0.24'));
+    contentLines.push(this.pdfText('Date Range', dateRangeX, headerTop - 16, 14, 'F1', '0.22 0.22 0.24'));
+    contentLines.push(this.pdfLine(tableLeft, tableTop + 54, tableLeft, 92, '0.81 0.84 0.88', 1));
+
+    let currentX = tableLeft + 12;
+    for (const column of columns) {
+      contentLines.push(
+        this.pdfText(column.label, currentX, tableTop + 18, 10, 'F1', '0.39 0.42 0.46')
+      );
+      currentX += column.width;
     }
+
+    context.rows.forEach((row, index) => {
+      const rowTop = tableTop - index * rowHeight;
+      const rowBottom = rowTop - rowHeight;
+      if (index === 0) {
+        contentLines.push(
+          this.pdfRect(tableLeft + 1, rowBottom + 2, tableRight - tableLeft - 2, rowHeight - 4, '0.95 0.96 0.97')
+        );
+      }
+      contentLines.push(
+        this.pdfLine(tableLeft, rowBottom, tableRight, rowBottom, '0.84 0.86 0.9', 1)
+      );
+
+      let cellX = tableLeft + 12;
+      const baseline = rowTop - 22;
+      const valueColor = '0.15 0.16 0.17';
+      const gapColor = row.gap > 0 ? '0.84 0.34 0.21' : '0.17 0.54 0.44';
+      const rowValues = [
+        row.date,
+        row.dow,
+        String(row.dta),
+        `${row.occ.toFixed(1)}%`,
+        String(row.pu7d),
+        `MX$${row.adr.toLocaleString('en-US')}`,
+        `MX$${row.revenue.toLocaleString('en-US')}`,
+        `MX$${row.tarifa.toLocaleString('en-US')}`,
+        `MX$${row.compSet.toLocaleString('en-US')}`,
+        `${row.gap.toFixed(1)}%`,
+        row.rank
+      ];
+
+      rowValues.forEach((value, valueIndex) => {
+        const color = valueIndex === 9 ? gapColor : valueColor;
+        contentLines.push(this.pdfText(value, cellX, baseline, bodySize, 'F2', color));
+        if (valueIndex === 9) {
+          contentLines.push(this.pdfText(row.gapRank, cellX, baseline - 11, 8, 'F1', '0.49 0.52 0.57'));
+        }
+        cellX += columns[valueIndex].width;
+      });
+    });
+
+    contentLines.push(this.pdfText(context.printedAt, margin, 54, 10, 'F1', '0.2 0.2 0.22'));
+    contentLines.push(this.pdfText(context.printedBy, margin, 38, 10, 'F1', '0.2 0.2 0.22'));
+    contentLines.push(this.pdfText('Page 1 of 1', centerX - 28, 34, 12, 'F1', '0.2 0.2 0.22'));
 
     const content = contentLines.join('\n');
     const objects = [
       '<< /Type /Catalog /Pages 2 0 R >>',
       '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
-      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${width} ${height}] /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >> /Contents 4 0 R >>`,
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${width} ${height}] /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> /F2 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> >> >> /Contents 4 0 R >>`,
       `<< /Length ${Buffer.byteLength(content, 'ascii')} >>\nstream\n${content}\nendstream`
     ];
 
@@ -1217,6 +1274,36 @@ export class ReportsService {
     body += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
 
     return Buffer.from(body, 'ascii');
+  }
+
+  private pdfText(
+    text: string,
+    x: number,
+    y: number,
+    size: number,
+    font: 'F1' | 'F2',
+    rgb: string
+  ): string {
+    return `BT /${font} ${size} Tf ${rgb} rg 1 0 0 1 ${x} ${y} Tm (${this.escapePdfText(text)}) Tj ET`;
+  }
+
+  private pdfLine(
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    strokeRgb: string,
+    lineWidth: number
+  ): string {
+    return `${strokeRgb} RG ${lineWidth} w ${x1} ${y1} m ${x2} ${y2} l S`;
+  }
+
+  private pdfRect(x: number, y: number, width: number, height: number, fillRgb: string): string {
+    return `${fillRgb} rg ${x} ${y} ${width} ${height} re f`;
+  }
+
+  private approxPdfTextWidth(text: string, fontSize: number): number {
+    return text.length * fontSize * 0.46;
   }
 
   private escapePdfText(text: string): string {

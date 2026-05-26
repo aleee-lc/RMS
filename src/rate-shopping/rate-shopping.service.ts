@@ -582,10 +582,14 @@ export class RateShoppingService {
       hotelRow?.currency ??
       null;
 
-    const sameCurrencyCompetitors = competitorRows.filter((row) => row.currency === currency);
+    const minRoomPrice = 200;
+    const sameCurrencyCompetitors = competitorRows.filter(
+      (row) => row.currency === currency && Number(row.price) >= minRoomPrice
+    );
     const prices = sameCurrencyCompetitors.map((row) => Number(row.price));
     const stats = this.computeMarketStats(prices);
-    const yourPrice = hotelRow && hotelRow.currency === currency ? Number(hotelRow.price) : null;
+    const rawYourPrice = hotelRow && hotelRow.currency === currency ? Number(hotelRow.price) : null;
+    const yourPrice = rawYourPrice !== null && rawYourPrice >= minRoomPrice ? rawYourPrice : null;
     const competitorsBelowYou =
       yourPrice === null
         ? 0

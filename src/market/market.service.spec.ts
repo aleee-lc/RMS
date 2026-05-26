@@ -75,4 +75,62 @@ describe('MarketService', () => {
       })
     );
   });
+
+  it('detects compact Expedia layouts where hotel row starts before row 12', async () => {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Expedia');
+    sheet.getRow(5).getCell(2).value = 'MAY 2026';
+    sheet.getRow(7).getCell(2).value = 26;
+    sheet.getRow(7).getCell(3).value = 27;
+    sheet.getRow(7).getCell(4).value = 28;
+    sheet.getRow(8).getCell(1).value = 'Your Property';
+    sheet.getRow(8).getCell(2).value = 1665;
+    sheet.getRow(8).getCell(3).value = 1665;
+    sheet.getRow(8).getCell(4).value = 1350;
+    sheet.getRow(9).getCell(1).value = 'Competitive set average';
+    sheet.getRow(9).getCell(2).value = 1678;
+    sheet.getRow(9).getCell(3).value = 1676;
+    sheet.getRow(9).getCell(4).value = 1642;
+    sheet.getRow(10).getCell(1).value = 'Competitive set rate trends WoW (May 19)';
+    sheet.getRow(10).getCell(2).value = '(-3%)';
+    sheet.getRow(10).getCell(3).value = '(-3%)';
+    sheet.getRow(10).getCell(4).value = '(-3%)';
+    sheet.getRow(11).getCell(1).value = 'Ibis Los Mochis';
+    sheet.getRow(11).getCell(2).value = 1232;
+    sheet.getRow(11).getCell(3).value = 1227;
+    sheet.getRow(11).getCell(4).value = 1121;
+    sheet.getRow(12).getCell(1).value = 'City Express by Marriott Los Mochis';
+    sheet.getRow(12).getCell(2).value = 1499;
+    sheet.getRow(12).getCell(3).value = 1499;
+    sheet.getRow(12).getCell(4).value = 1499;
+
+    const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
+
+    await service.ingestExpediaGrid(1, 'expedia-compact.xlsx', buffer);
+
+    expect(prisma.marketRates.upsert).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        create: expect.objectContaining({
+          yourPrice: 1665,
+          marketAverage: 1678
+        })
+      })
+    );
+
+    expect(prisma.competitor.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          name: 'Ibis Los Mochis'
+        })
+      })
+    );
+    expect(prisma.competitor.upsert).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          name: expect.stringMatching(/rate trends/i)
+        })
+      })
+    );
+  });
 });

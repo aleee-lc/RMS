@@ -58,10 +58,10 @@
           mat-stroked-button
           type="button"
           (click)="onExportPdf()"
-          [disabled]="loading() || exporting() !== null"
+          [disabled]="loading() || printing()"
         >
-          <mat-icon>{{ isExporting('pdf') ? 'hourglass_empty' : 'picture_as_pdf' }}</mat-icon>
-          PDF
+          <mat-icon>{{ printing() ? 'hourglass_empty' : 'picture_as_pdf' }}</mat-icon>
+          Print / PDF
         </button>
       </div>
     </div>

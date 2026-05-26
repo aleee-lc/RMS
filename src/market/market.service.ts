@@ -76,6 +76,7 @@ export class MarketService {
       if (row.rowIndex === hotelRow.rowIndex) return false;
       if (marketAverageRow && row.rowIndex === marketAverageRow.rowIndex) return false;
       if (/competitive\s*set\s*average(?:\s*rates)?/i.test(row.label)) return false;
+      if (/competitive\s*set\s*rate\s*trends/i.test(row.label)) return false;
       if (/search demand|previous year|rest of/i.test(row.label)) return false;
       return true;
     });
@@ -310,7 +311,7 @@ export class MarketService {
     dateColumns: Map<number, Date>
   ): ParsedPriceRow[] {
     const rows: ParsedPriceRow[] = [];
-    const firstDataRow = 12;
+    const firstDataRow = this.detectFirstPriceRow(sheet, dateColumns);
 
     for (let rowIndex = firstDataRow; rowIndex <= sheet.rowCount; rowIndex += 1) {
       const row = sheet.getRow(rowIndex);
@@ -340,6 +341,29 @@ export class MarketService {
     }
 
     return rows;
+  }
+
+  private detectFirstPriceRow(sheet: ExcelJS.Worksheet, dateColumns: Map<number, Date>): number {
+    const sortedDateColumns = [...dateColumns.keys()].sort((a, b) => a - b);
+    const firstDateColumn = sortedDateColumns[0];
+    if (!firstDateColumn) {
+      return 12;
+    }
+
+    for (let rowIndex = 1; rowIndex <= Math.min(sheet.rowCount, 20); rowIndex += 1) {
+      const label = this.cellToString(sheet.getRow(rowIndex).getCell(1).value);
+      const price = this.parsePriceCell(sheet.getRow(rowIndex).getCell(firstDateColumn).value);
+
+      if (!label || price === null) {
+        continue;
+      }
+
+      if (/your\s+property/i.test(label)) {
+        return rowIndex;
+      }
+    }
+
+    return 12;
   }
 
   private pickMarketAverageRow(rows: ParsedPriceRow[]): ParsedPriceRow | null {

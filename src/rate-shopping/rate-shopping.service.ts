@@ -231,61 +231,82 @@ export class RateShoppingService {
       throw new NotFoundException(`Hotel ${params.hotelId} not found`);
     }
 
-    const snapshots = await this.listSnapshots({
-      hotelId: params.hotelId,
-      startDate: params.startDate,
-      endDate: params.endDate,
-      limit: 1000
-    });
+    try {
+      const snapshots = await this.listSnapshots({
+        hotelId: params.hotelId,
+        startDate: params.startDate,
+        endDate: params.endDate,
+        limit: 1000
+      });
 
-    const latestByDateCompetitor = new Map<string, (typeof snapshots)[number]>();
-    for (const snapshot of snapshots) {
-      const key = `${dateKey(snapshot.checkInDate)}::${snapshot.competitorName}`;
-      const current = latestByDateCompetitor.get(key);
-      if (!current || snapshot.scrapedAt > current.scrapedAt) {
-        latestByDateCompetitor.set(key, snapshot);
+      const latestByDateCompetitor = new Map<string, (typeof snapshots)[number]>();
+      for (const snapshot of snapshots) {
+        const key = `${dateKey(snapshot.checkInDate)}::${snapshot.competitorName}`;
+        const current = latestByDateCompetitor.get(key);
+        if (!current || snapshot.scrapedAt > current.scrapedAt) {
+          latestByDateCompetitor.set(key, snapshot);
+        }
       }
+
+      const byDate = new Map<string, RateShopSnapshotListItem[]>();
+      for (const snapshot of latestByDateCompetitor.values()) {
+        const key = dateKey(snapshot.checkInDate);
+        const items = byDate.get(key) ?? [];
+        items.push(snapshot);
+        byDate.set(key, items);
+      }
+
+      const items = [...byDate.entries()]
+        .sort((a, b) => (a[0] < b[0] ? -1 : 1))
+        .map(([date, rows]) => this.buildSummaryDateItem(hotel.name, date, rows));
+
+      const spotlight = items[0] ?? null;
+      const latestScrapedAt =
+        snapshots.length > 0
+          ? new Date(
+              Math.max(...snapshots.map((snapshot) => snapshot.scrapedAt.getTime()))
+            ).toISOString()
+          : null;
+
+      return {
+        query: {
+          startDate: params.startDate ? dateKey(params.startDate) : null,
+          endDate: params.endDate ? dateKey(params.endDate) : null,
+          city: params.city ?? null
+        },
+        lastScrapedAt: latestScrapedAt,
+        snapshotCount: snapshots.length,
+        datesCovered: items.length,
+        spotlight,
+        items,
+        cheapestPublicRates: items
+          .filter((item) => item.cheapestCompetitor)
+          .slice(0, 5)
+          .map((item) => ({
+            date: item.date,
+            competitorName: item.cheapestCompetitor?.name ?? null,
+            price: item.cheapestCompetitor?.price ?? null,
+            gapPct: item.gapPct
+          }))
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Rate shopping summary failed for hotel ${params.hotelId}: ${message}`);
+
+      return {
+        query: {
+          startDate: params.startDate ? dateKey(params.startDate) : null,
+          endDate: params.endDate ? dateKey(params.endDate) : null,
+          city: params.city ?? null
+        },
+        lastScrapedAt: null,
+        snapshotCount: 0,
+        datesCovered: 0,
+        spotlight: null,
+        items: [],
+        cheapestPublicRates: []
+      };
     }
-
-    const byDate = new Map<string, RateShopSnapshotListItem[]>();
-    for (const snapshot of latestByDateCompetitor.values()) {
-      const key = dateKey(snapshot.checkInDate);
-      const items = byDate.get(key) ?? [];
-      items.push(snapshot);
-      byDate.set(key, items);
-    }
-
-    const items = [...byDate.entries()]
-      .sort((a, b) => (a[0] < b[0] ? -1 : 1))
-      .map(([date, rows]) => this.buildSummaryDateItem(hotel.name, date, rows));
-
-    const spotlight = items[0] ?? null;
-    const latestScrapedAt =
-      snapshots.length > 0
-        ? new Date(Math.max(...snapshots.map((snapshot) => snapshot.scrapedAt.getTime()))).toISOString()
-        : null;
-
-    return {
-      query: {
-        startDate: params.startDate ? dateKey(params.startDate) : null,
-        endDate: params.endDate ? dateKey(params.endDate) : null,
-        city: params.city ?? null
-      },
-      lastScrapedAt: latestScrapedAt,
-      snapshotCount: snapshots.length,
-      datesCovered: items.length,
-      spotlight,
-      items,
-      cheapestPublicRates: items
-        .filter((item) => item.cheapestCompetitor)
-        .slice(0, 5)
-        .map((item) => ({
-          date: item.date,
-          competitorName: item.cheapestCompetitor?.name ?? null,
-          price: item.cheapestCompetitor?.price ?? null,
-          gapPct: item.gapPct
-        }))
-    };
   }
 
   async runDailyForAllHotels() {

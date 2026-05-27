@@ -114,11 +114,13 @@ export class IngestionController {
   @Delete('reservations')
   @HttpCode(HttpStatus.OK)
   async deleteReservations(
-    @Query() query: HotelQueryDto & { startDate?: string; endDate?: string },
+    @Query() query: HotelQueryDto,
+    @Query('startDate') startDateRaw: string,
+    @Query('endDate') endDateRaw: string,
     @CurrentUser() user: AuthenticatedUser
   ) {
-    const startDate = parseIsoDate(query.startDate ?? '');
-    const endDate = parseIsoDate(query.endDate ?? '');
+    const startDate = parseIsoDate(startDateRaw);
+    const endDate = parseIsoDate(endDateRaw);
 
     if (!startDate || !endDate) {
       throw new BadRequestException('startDate and endDate are required (ISO format: YYYY-MM-DD)');

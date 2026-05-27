@@ -5,6 +5,7 @@ import { RateShoppingController } from './rate-shopping.controller';
 import { RateShoppingNormalizer } from './rate-shopping.normalizer';
 import { RateShoppingScheduler } from './rate-shopping.scheduler';
 import { RATE_SHOPPING_SCRAPERS, RateShoppingService } from './rate-shopping.service';
+import { BookingComScraper } from './scrapers/booking-com.scraper';
 import { GoogleHotelsPublicScraper } from './scrapers/google-hotels-public.scraper';
 
 @Module({
@@ -12,12 +13,14 @@ import { GoogleHotelsPublicScraper } from './scrapers/google-hotels-public.scrap
   controllers: [RateShoppingController],
   providers: [
     GoogleHotelsPublicScraper,
+    BookingComScraper,
     {
       provide: RATE_SHOPPING_SCRAPERS,
-      useFactory: (googleHotelsPublicScraper: GoogleHotelsPublicScraper) => [
-        googleHotelsPublicScraper
-      ],
-      inject: [GoogleHotelsPublicScraper]
+      useFactory: (
+        googleHotelsPublicScraper: GoogleHotelsPublicScraper,
+        bookingComScraper: BookingComScraper
+      ) => [googleHotelsPublicScraper, bookingComScraper],
+      inject: [GoogleHotelsPublicScraper, BookingComScraper]
     },
     RateShoppingNormalizer,
     RateShoppingService,

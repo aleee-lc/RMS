@@ -1,8 +1,22 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseIntPipe,
+  Patch,
+  Post
+} from '@nestjs/common';
 import { AuthenticatedUser } from '../auth/auth.types';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { HotelContextService } from '../common/hotel-context.service';
 import { CreateHotelDto } from './dto/create-hotel.dto';
+import { CreateInviteCodeDto } from './dto/create-invite-code.dto';
+import { JoinHotelDto } from './dto/join-hotel.dto';
+import { UpdateMemberRoleDto } from './dto/update-member-role.dto';
 import { UpdateRecommendationSettingsDto } from './dto/update-recommendation-settings.dto';
 import { UpdateHotelDto } from './dto/update-hotel.dto';
 import { HotelsService } from './hotels.service';
@@ -20,6 +34,13 @@ export class HotelsController {
     return {
       item: this.toResponse(hotel)
     };
+  }
+
+  // Must be before /:id routes to avoid routing conflict
+  @Post('join')
+  @HttpCode(HttpStatus.OK)
+  async joinHotel(@Body() body: JoinHotelDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.hotelsService.joinWithCode(user, body.code);
   }
 
   @Get()
@@ -55,6 +76,70 @@ export class HotelsController {
       item: this.toResponse(hotel)
     };
   }
+
+  // ── Invite codes ──────────────────────────────────────────────────────────────
+
+  @Post(':id/invite-codes')
+  @HttpCode(HttpStatus.CREATED)
+  async createInviteCode(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: CreateInviteCodeDto,
+    @CurrentUser() user: AuthenticatedUser
+  ) {
+    return this.hotelsService.createInviteCode(user, id, body);
+  }
+
+  @Get(':id/invite-codes')
+  async listInviteCodes(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: AuthenticatedUser
+  ) {
+    const items = await this.hotelsService.listInviteCodes(user, id);
+    return { count: items.length, items };
+  }
+
+  @Delete(':id/invite-codes/:codeId')
+  @HttpCode(HttpStatus.OK)
+  async deactivateInviteCode(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('codeId', ParseIntPipe) codeId: number,
+    @CurrentUser() user: AuthenticatedUser
+  ) {
+    return this.hotelsService.deactivateInviteCode(user, id, codeId);
+  }
+
+  // ── Members ───────────────────────────────────────────────────────────────────
+
+  @Get(':id/members')
+  async listMembers(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: AuthenticatedUser
+  ) {
+    const items = await this.hotelsService.listMembers(user, id);
+    return { count: items.length, items };
+  }
+
+  @Patch(':id/members/:userId')
+  async updateMemberRole(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('userId', ParseIntPipe) userId: number,
+    @Body() body: UpdateMemberRoleDto,
+    @CurrentUser() user: AuthenticatedUser
+  ) {
+    return this.hotelsService.updateMemberRole(user, id, userId, body.role);
+  }
+
+  @Delete(':id/members/:userId')
+  @HttpCode(HttpStatus.OK)
+  async removeMember(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('userId', ParseIntPipe) userId: number,
+    @CurrentUser() user: AuthenticatedUser
+  ) {
+    return this.hotelsService.removeMember(user, id, userId);
+  }
+
+  // ── Recommendation settings ───────────────────────────────────────────────────
 
   @Get(':id/recommendation-settings')
   async getRecommendationSettings(

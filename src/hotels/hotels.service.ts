@@ -1,4 +1,11 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { randomBytes } from 'crypto';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException
+} from '@nestjs/common';
 import { Prisma, RecommendationSettings, UserRole } from '@prisma/client';
 import { AuthenticatedUser } from '../auth/auth.types';
 import { PrismaService } from '../prisma/prisma.service';
@@ -7,6 +14,7 @@ import {
   RecommendationSettingsConfig
 } from '../recommendation/recommendation-settings';
 import { CreateHotelDto } from './dto/create-hotel.dto';
+import { CreateInviteCodeDto } from './dto/create-invite-code.dto';
 import { UpdateRecommendationSettingsDto } from './dto/update-recommendation-settings.dto';
 import { UpdateHotelDto } from './dto/update-hotel.dto';
 
@@ -96,6 +104,214 @@ export class HotelsService {
     }
   }
 
+  // ── Invite codes ─────────────────────────────────────────────────────────────
+
+  async createInviteCode(user: AuthenticatedUser, hotelId: number, input: CreateInviteCodeDto) {
+    await this.requireRole(user, hotelId, ['OWNER', 'MANAGER']);
+
+    const hotel = await this.getById(hotelId);
+
+    let code: string;
+    let attempts = 0;
+    do {
+      const suffix = randomBytes(3).toString('hex').toUpperCase();
+      code = `${hotel.code}-${suffix}`;
+      attempts++;
+      if (attempts > 20) throw new Error('Failed to generate unique invite code');
+    } while (await this.prisma.hotelInviteCode.findUnique({ where: { code } }));
+
+    const inviteCode = await this.prisma.hotelInviteCode.create({
+      data: {
+        hotelId,
+        code,
+        role: input.role,
+        label: input.label?.trim() || null,
+        expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
+        maxUses: input.maxUses ?? null,
+        createdByUserId: user.id
+      }
+    });
+
+    return this.toInviteCodeResponse(inviteCode);
+  }
+
+  async listInviteCodes(user: AuthenticatedUser, hotelId: number) {
+    await this.requireRole(user, hotelId, ['OWNER', 'MANAGER']);
+
+    const codes = await this.prisma.hotelInviteCode.findMany({
+      where: { hotelId, active: true },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return codes.map((c) => this.toInviteCodeResponse(c));
+  }
+
+  async deactivateInviteCode(user: AuthenticatedUser, hotelId: number, codeId: number) {
+    await this.requireRole(user, hotelId, ['OWNER', 'MANAGER']);
+
+    const code = await this.prisma.hotelInviteCode.findFirst({
+      where: { id: codeId, hotelId }
+    });
+    if (!code) {
+      throw new NotFoundException('Invite code not found');
+    }
+
+    const updated = await this.prisma.hotelInviteCode.update({
+      where: { id: codeId },
+      data: { active: false }
+    });
+
+    return this.toInviteCodeResponse(updated);
+  }
+
+  // ── Join with code ────────────────────────────────────────────────────────────
+
+  async joinWithCode(user: AuthenticatedUser, code: string) {
+    const inviteCode = await this.prisma.hotelInviteCode.findUnique({
+      where: { code: code.trim().toUpperCase() },
+      include: { hotel: true }
+    });
+
+    if (!inviteCode || !inviteCode.active) {
+      throw new NotFoundException('Invalid or inactive invite code');
+    }
+
+    if (inviteCode.expiresAt && inviteCode.expiresAt < new Date()) {
+      throw new BadRequestException('This invite code has expired');
+    }
+
+    if (inviteCode.maxUses !== null && inviteCode.uses >= inviteCode.maxUses) {
+      throw new BadRequestException('This invite code has reached its maximum usage limit');
+    }
+
+    const existing = await this.prisma.hotelMembership.findUnique({
+      where: { userId_hotelId: { userId: user.id, hotelId: inviteCode.hotelId } }
+    });
+    if (existing) {
+      throw new ConflictException('You are already a member of this hotel');
+    }
+
+    const membershipCount = await this.prisma.hotelMembership.count({
+      where: { userId: user.id }
+    });
+
+    const membership = await this.prisma.hotelMembership.create({
+      data: {
+        userId: user.id,
+        hotelId: inviteCode.hotelId,
+        role: inviteCode.role,
+        isDefault: membershipCount === 0
+      }
+    });
+
+    await this.prisma.hotelInviteCode.update({
+      where: { id: inviteCode.id },
+      data: { uses: { increment: 1 } }
+    });
+
+    return {
+      hotel: {
+        id: inviteCode.hotel.id,
+        code: inviteCode.hotel.code,
+        name: inviteCode.hotel.name,
+        totalRooms: inviteCode.hotel.totalRooms,
+        currency: inviteCode.hotel.currency,
+        timezone: inviteCode.hotel.timezone
+      },
+      membership: {
+        role: membership.role,
+        isDefault: membership.isDefault
+      }
+    };
+  }
+
+  // ── Member management ─────────────────────────────────────────────────────────
+
+  async listMembers(user: AuthenticatedUser, hotelId: number) {
+    await this.requireRole(user, hotelId, ['OWNER', 'MANAGER']);
+
+    const memberships = await this.prisma.hotelMembership.findMany({
+      where: { hotelId },
+      include: {
+        user: { select: { id: true, email: true, name: true, emailVerified: true } }
+      },
+      orderBy: [{ role: 'asc' }, { createdAt: 'asc' }]
+    });
+
+    return memberships.map((m) => ({
+      userId: m.user.id,
+      name: m.user.name,
+      email: m.user.email,
+      emailVerified: m.user.emailVerified,
+      role: m.role,
+      isDefault: m.isDefault,
+      memberSince: m.createdAt.toISOString()
+    }));
+  }
+
+  async updateMemberRole(
+    requester: AuthenticatedUser,
+    hotelId: number,
+    targetUserId: number,
+    role: 'MANAGER' | 'ANALYST' | 'VIEWER'
+  ) {
+    await this.requireRole(requester, hotelId, ['OWNER']);
+
+    if (requester.id === targetUserId) {
+      throw new BadRequestException('Cannot change your own role');
+    }
+
+    const membership = await this.prisma.hotelMembership.findUnique({
+      where: { userId_hotelId: { userId: targetUserId, hotelId } }
+    });
+    if (!membership) {
+      throw new NotFoundException('Member not found in this hotel');
+    }
+
+    if (membership.role === 'OWNER' && requester.role !== UserRole.ADMIN) {
+      throw new ForbiddenException("Only system admins can change an owner's role");
+    }
+
+    const updated = await this.prisma.hotelMembership.update({
+      where: { userId_hotelId: { userId: targetUserId, hotelId } },
+      data: { role }
+    });
+
+    return { userId: targetUserId, hotelId, role: updated.role };
+  }
+
+  async removeMember(requester: AuthenticatedUser, hotelId: number, targetUserId: number) {
+    await this.requireRole(requester, hotelId, ['OWNER']);
+
+    if (requester.id === targetUserId && requester.role !== UserRole.ADMIN) {
+      throw new BadRequestException('Cannot remove yourself. Transfer ownership first.');
+    }
+
+    const membership = await this.prisma.hotelMembership.findUnique({
+      where: { userId_hotelId: { userId: targetUserId, hotelId } }
+    });
+    if (!membership) {
+      throw new NotFoundException('Member not found in this hotel');
+    }
+
+    if (membership.role === 'OWNER') {
+      const ownerCount = await this.prisma.hotelMembership.count({
+        where: { hotelId, role: 'OWNER' }
+      });
+      if (ownerCount <= 1) {
+        throw new BadRequestException('Cannot remove the last owner of a hotel');
+      }
+    }
+
+    await this.prisma.hotelMembership.delete({
+      where: { userId_hotelId: { userId: targetUserId, hotelId } }
+    });
+
+    return { removed: true, userId: targetUserId };
+  }
+
+  // ── Recommendation settings ───────────────────────────────────────────────────
+
   async getRecommendationSettings(hotelId: number): Promise<{
     settings: RecommendationSettingsConfig;
     isDefault: boolean;
@@ -141,6 +357,48 @@ export class HotelsService {
     const persisted = await this.upsertRecommendationSettings(hotelId, merged);
 
     return this.toRecommendationSettingsConfig(persisted);
+  }
+
+  // ── Private helpers ───────────────────────────────────────────────────────────
+
+  private async requireRole(
+    user: AuthenticatedUser,
+    hotelId: number,
+    allowedRoles: string[]
+  ): Promise<void> {
+    if (user.role === UserRole.ADMIN) return;
+
+    const membership = await this.prisma.hotelMembership.findUnique({
+      where: { userId_hotelId: { userId: user.id, hotelId } }
+    });
+
+    if (!membership || !allowedRoles.includes(membership.role)) {
+      throw new ForbiddenException('Insufficient permissions for this action');
+    }
+  }
+
+  private toInviteCodeResponse(code: {
+    id: number;
+    code: string;
+    role: string;
+    label: string | null;
+    active: boolean;
+    expiresAt: Date | null;
+    uses: number;
+    maxUses: number | null;
+    createdAt: Date;
+  }) {
+    return {
+      id: code.id,
+      code: code.code,
+      role: code.role,
+      label: code.label,
+      active: code.active,
+      expiresAt: code.expiresAt?.toISOString() ?? null,
+      uses: code.uses,
+      maxUses: code.maxUses,
+      createdAt: code.createdAt.toISOString()
+    };
   }
 
   private async upsertRecommendationSettings(

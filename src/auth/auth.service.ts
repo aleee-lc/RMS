@@ -1,7 +1,10 @@
+import { randomBytes } from 'crypto';
 import {
+  ConflictException,
   ForbiddenException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
   UnauthorizedException
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
@@ -11,6 +14,55 @@ import { hashPassword, verifyPassword } from './password.util';
 @Injectable()
 export class AuthService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async register(input: { name: string; email: string; password: string }) {
+    const email = input.email.trim().toLowerCase();
+
+    const existing = await this.prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      throw new ConflictException('An account with this email already exists');
+    }
+
+    const verificationToken = randomBytes(20).toString('hex');
+
+    const user = await this.prisma.user.create({
+      data: {
+        email,
+        name: input.name.trim(),
+        passwordHash: hashPassword(input.password),
+        role: 'USER',
+        active: true,
+        emailVerified: false,
+        emailVerificationToken: verificationToken
+      }
+    });
+
+    return {
+      message: 'Account created. Verify your email to activate it.',
+      userId: user.id,
+      email: user.email,
+      // Returned directly since email sending is not yet configured.
+      // In production, remove this field and send the token by email instead.
+      verificationToken
+    };
+  }
+
+  async verifyEmail(token: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { emailVerificationToken: token }
+    });
+
+    if (!user) {
+      throw new NotFoundException('Invalid or expired verification token');
+    }
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { emailVerified: true, emailVerificationToken: null }
+    });
+
+    return { message: 'Email verified. You can now log in.' };
+  }
 
   async login(email: string, password: string) {
     const user = await this.prisma.user.findUnique({
@@ -25,6 +77,12 @@ export class AuthService {
 
     if (!user || !user.active || !verifyPassword(password, user.passwordHash)) {
       throw new UnauthorizedException('Invalid email or password');
+    }
+
+    if (!user.emailVerified) {
+      throw new UnauthorizedException(
+        'Email not verified. Use the verification token from registration to activate your account.'
+      );
     }
 
     return {
@@ -82,14 +140,16 @@ export class AuthService {
         name: input.name?.trim() || 'RevSight Admin',
         passwordHash: hashPassword(input.password),
         role: 'ADMIN',
-        active: true
+        active: true,
+        emailVerified: true
       },
       create: {
         email: input.email.trim().toLowerCase(),
         name: input.name?.trim() || 'RevSight Admin',
         passwordHash: hashPassword(input.password),
         role: 'ADMIN',
-        active: true
+        active: true,
+        emailVerified: true
       }
     });
 

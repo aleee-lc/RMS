@@ -78,6 +78,31 @@ export class IngestionService {
     private readonly alertsService: AlertsService
   ) {}
 
+  async deleteReservationsByArrivalRange(
+    hotelId: number,
+    startDate: Date,
+    endDate: Date
+  ): Promise<{ deleted: number; metricsRecomputedDays: number }> {
+    const { count: deleted } = await this.prisma.reservationRaw.deleteMany({
+      where: {
+        hotelId,
+        arrivalDate: {
+          gte: startDate,
+          lte: endDate
+        }
+      }
+    });
+
+    const metricsRecomputedDays = await this.metricsService.recomputeDailyMetrics(
+      hotelId,
+      startDate,
+      endDate
+    );
+    await this.alertsService.syncOccupancyAlerts(hotelId, startDate, endDate);
+
+    return { deleted, metricsRecomputedDays };
+  }
+
   async ingestXml(fileBuffer: Buffer, fileName: string, hotelId: number) {
     const xmlText = fileBuffer.toString('utf-8');
     const parsed = this.xmlParser.parse(xmlText);

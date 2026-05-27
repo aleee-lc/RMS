@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Controller,
+  Delete,
   HttpCode,
   HttpStatus,
   InternalServerErrorException,
@@ -16,6 +17,7 @@ import { AuthenticatedUser } from '../auth/auth.types';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { HotelQueryDto } from '../common/dto/hotel-query.dto';
 import { HotelContextService } from '../common/hotel-context.service';
+import { parseIsoDate, toUtcDateOnly } from '../common/utils/date.util';
 import { IngestionService } from './ingestion.service';
 
 @Controller('upload')
@@ -106,6 +108,38 @@ export class IngestionController {
       hotel,
       source_file: file.originalname,
       ...result
+    };
+  }
+
+  @Delete('reservations')
+  @HttpCode(HttpStatus.OK)
+  async deleteReservations(
+    @Query() query: HotelQueryDto & { startDate?: string; endDate?: string },
+    @CurrentUser() user: AuthenticatedUser
+  ) {
+    const startDate = parseIsoDate(query.startDate ?? '');
+    const endDate = parseIsoDate(query.endDate ?? '');
+
+    if (!startDate || !endDate) {
+      throw new BadRequestException('startDate and endDate are required (ISO format: YYYY-MM-DD)');
+    }
+    if (startDate > endDate) {
+      throw new BadRequestException('startDate must be before or equal to endDate');
+    }
+
+    const hotel = await this.hotelContextService.resolveHotelForUser(user, query.hotelId);
+    const result = await this.ingestionService.deleteReservationsByArrivalRange(
+      hotel.id,
+      toUtcDateOnly(startDate),
+      toUtcDateOnly(endDate)
+    );
+
+    return {
+      hotel,
+      startDate: startDate.toISOString().slice(0, 10),
+      endDate: endDate.toISOString().slice(0, 10),
+      reservations_deleted: result.deleted,
+      metrics_recomputed_days: result.metricsRecomputedDays
     };
   }
 

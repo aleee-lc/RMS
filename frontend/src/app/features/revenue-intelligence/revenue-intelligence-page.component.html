@@ -159,6 +159,10 @@
         </div>
       </div>
 
+      <div class="state-card compact-state" *ngIf="publicRateWatchWarning() as warning">
+        <strong>Lectura parcial.</strong> {{ warning }}
+      </div>
+
       <div class="state-card compact-state" *ngIf="!rateShopLoading()">
         <strong>MakCorps usa hotel IDs propios.</strong> Configura `MAKCORPS_API_KEY` y
         `MAKCORPS_HOTEL_IDS_JSON` en el backend para habilitar este boton.

@@ -76,6 +76,18 @@ export class RevenueIntelligencePageComponent {
   readonly topRisks = computed(() => this.summary()?.top_risks ?? []);
   readonly topPickup = computed(() => this.summary()?.top_pickup ?? []);
   readonly publicRateWatch = computed(() => this.rateShopSummary()?.spotlight ?? null);
+  readonly publicRateWatchWarning = computed(() => {
+    const market = this.publicRateWatch();
+    if (!market) {
+      return null;
+    }
+
+    if (market.competitorCount <= 1 || market.yourPrice === null) {
+      return 'Muestra parcial: faltan competidores o la tarifa publica propia. Toma esta lectura como referencia, no como benchmark final.';
+    }
+
+    return null;
+  });
   readonly priorityActions = computed(() => {
     return [...this.topOpportunities(), ...this.topRisks()]
       .filter((row, index, rows) => rows.findIndex((item) => item.date === row.date) === index)

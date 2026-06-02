@@ -25,6 +25,7 @@ export class MakCorpsHotelApiProvider implements RateShoppingScraper {
     process.env.MAKCORPS_MAPPING_ENDPOINT ?? 'https://api.makcorps.com/mapping';
   private readonly currency = (process.env.MAKCORPS_CURRENCY ?? 'MXN').trim().toUpperCase();
   private readonly rooms = Math.max(1, Number(process.env.MAKCORPS_ROOMS ?? 1));
+  private readonly includeTax = `${process.env.MAKCORPS_INCLUDE_TAX ?? 'true'}` !== 'false';
 
   async scrape(input: RateShoppingSearchInput): Promise<RawRateShoppingResult[]> {
     const apiKey = this.apiKey();
@@ -116,7 +117,14 @@ export class MakCorpsHotelApiProvider implements RateShoppingScraper {
           continue;
         }
 
-        const price = this.parseMoney(priceText);
+        const basePrice = this.parseMoney(priceText);
+        const tax = this.parseMoney(taxText);
+        const price =
+          basePrice === null
+            ? null
+            : Number(
+                (this.includeTax ? basePrice + (tax ?? 0) : basePrice).toFixed(2)
+              );
         rows.push({
           hotelName: targetHotelName,
           source: vendor,

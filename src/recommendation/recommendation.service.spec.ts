@@ -64,7 +64,7 @@ describe('RecommendationService', () => {
     expect(results).toHaveLength(1);
     expect(results[0].action).toBe(RecommendationAction.DECREASE);
     expect(results[0].occupancy).toBeNull();
-    expect(results[0].explanation).toContain('No demand metric available');
+    expect(results[0].explanation).toContain('No hay métrica de demanda disponible');
     expect(alertsService.syncFromRecommendations).toHaveBeenCalledTimes(1);
   });
 });

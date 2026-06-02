@@ -176,8 +176,8 @@ describe('AlertsService', () => {
           }
         },
         create: expect.objectContaining({
-          title: 'Price above comp set',
-          message: expect.stringContaining('30.0% above comp set average (100.00)')
+          title: 'Precio por encima del comp set',
+          message: expect.stringContaining('30.0% por encima del promedio del comp set (100.00)')
         })
       })
     );
@@ -202,8 +202,8 @@ describe('AlertsService', () => {
         create: expect.objectContaining({
           type: 'competitive-set',
           severity: AlertSeverity.LOW,
-          title: 'Price above comp set',
-          message: expect.stringContaining('4.0% above comp set average')
+          title: 'Precio por encima del comp set',
+          message: expect.stringContaining('4.0% por encima del promedio del comp set')
         })
       })
     );

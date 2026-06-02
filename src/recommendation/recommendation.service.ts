@@ -274,27 +274,27 @@ export class RecommendationService {
 
     if (!input.hasDemandSignal) {
       if (input.action === RecommendationAction.INCREASE) {
-        return `No demand metric available; market gap (${gapText} below comp set threshold ${input.config.significantDiffPct}%) supports an increase to ${input.suggestedPrice.toFixed(2)}.`;
+        return `No hay métrica de demanda disponible; la brecha de mercado (${gapText} por debajo del umbral del comp set de ${input.config.significantDiffPct}%) respalda un aumento a ${input.suggestedPrice.toFixed(2)}.`;
       }
 
       if (input.action === RecommendationAction.DECREASE) {
-        return `No demand metric available; market gap (${gapText} above comp set threshold ${input.config.significantDiffPct}%) supports a decrease to ${input.suggestedPrice.toFixed(2)}.`;
+        return `No hay métrica de demanda disponible; la brecha de mercado (${gapText} por encima del umbral del comp set de ${input.config.significantDiffPct}%) respalda una baja a ${input.suggestedPrice.toFixed(2)}.`;
       }
 
-      return `No demand metric available and price position (${gapText} vs market) is within configured threshold; hold at ${input.suggestedPrice.toFixed(2)}.`;
+      return `No hay métrica de demanda disponible y la posición tarifaria (${gapText} vs mercado) está dentro del umbral configurado; mantener en ${input.suggestedPrice.toFixed(2)}.`;
     }
 
     const occupancyText = `${input.occupancy.toFixed(1)}%`;
 
     if (input.action === RecommendationAction.INCREASE) {
-      return `High demand (${occupancyText} occupancy > ${input.config.highOccupancyThreshold}%) and underpricing (${gapText} vs market threshold ${input.config.significantDiffPct}%) support an increase to ${input.suggestedPrice.toFixed(2)}.`;
+      return `La alta demanda (ocupación de ${occupancyText} > ${input.config.highOccupancyThreshold}%) y el subprecio (${gapText} vs umbral de mercado de ${input.config.significantDiffPct}%) respaldan un aumento a ${input.suggestedPrice.toFixed(2)}.`;
     }
 
     if (input.action === RecommendationAction.DECREASE) {
-      return `Low demand (${occupancyText} occupancy < ${input.config.lowOccupancyThreshold}%) and overpricing (${gapText} vs market threshold ${input.config.significantDiffPct}%) support a decrease to ${input.suggestedPrice.toFixed(2)}.`;
+      return `La baja demanda (ocupación de ${occupancyText} < ${input.config.lowOccupancyThreshold}%) y el sobreprecio (${gapText} vs umbral de mercado de ${input.config.significantDiffPct}%) respaldan una baja a ${input.suggestedPrice.toFixed(2)}.`;
     }
 
-    return `Current demand (${occupancyText}) and price position (${gapText} vs market) do not exceed configured thresholds; hold at ${input.suggestedPrice.toFixed(2)}.`;
+    return `La demanda actual (${occupancyText}) y la posición tarifaria (${gapText} vs mercado) no superan los umbrales configurados; mantener en ${input.suggestedPrice.toFixed(2)}.`;
   }
 
   private async resolveGenerationConfig(

@@ -34,7 +34,7 @@ export class AlertsService {
         date: recommendation.date,
         type: 'pricing-opportunity',
         severity,
-        title: `${recommendation.action.toLowerCase()} pricing opportunity`,
+        title: this.pricingOpportunityTitle(recommendation.action),
         message: recommendation.explanation,
         resolved: false
       });
@@ -74,8 +74,8 @@ export class AlertsService {
           date: metric.date,
           type: 'occupancy',
           severity,
-          title: 'High occupancy detected',
-          message: `Occupancy at ${occupancyText}% is above threshold ${settings.highOccupancyThreshold.toFixed(1)}%.`,
+          title: 'Alta ocupación detectada',
+          message: `La ocupación de ${occupancyText}% está por encima del umbral de ${settings.highOccupancyThreshold.toFixed(1)}%.`,
           resolved: false
         });
         continue;
@@ -92,8 +92,8 @@ export class AlertsService {
           date: metric.date,
           type: 'occupancy',
           severity,
-          title: 'Low occupancy detected',
-          message: `Occupancy at ${occupancyText}% is below threshold ${settings.lowOccupancyThreshold.toFixed(1)}%.`,
+          title: 'Baja ocupación detectada',
+          message: `La ocupación de ${occupancyText}% está por debajo del umbral de ${settings.lowOccupancyThreshold.toFixed(1)}%.`,
           resolved: false
         });
         continue;
@@ -154,10 +154,10 @@ export class AlertsService {
           : absDiff >= settings.significantDiffPct
             ? AlertSeverity.MEDIUM
             : AlertSeverity.LOW;
-      const title = aboveMarket ? 'Price above comp set' : 'Price below comp set';
+      const title = aboveMarket ? 'Precio por encima del comp set' : 'Precio por debajo del comp set';
       const message = aboveMarket
-        ? `Your price (${yourPrice.toFixed(2)}) is ${absDiff.toFixed(1)}% above comp set average (${marketAverage.toFixed(2)}). Threshold for medium severity is ${settings.significantDiffPct.toFixed(1)}%.`
-        : `Your price (${yourPrice.toFixed(2)}) is ${absDiff.toFixed(1)}% below comp set average (${marketAverage.toFixed(2)}). Threshold for medium severity is ${settings.significantDiffPct.toFixed(1)}%.`;
+        ? `Tu tarifa (${yourPrice.toFixed(2)}) está ${absDiff.toFixed(1)}% por encima del promedio del comp set (${marketAverage.toFixed(2)}). El umbral para severidad media es ${settings.significantDiffPct.toFixed(1)}%.`
+        : `Tu tarifa (${yourPrice.toFixed(2)}) está ${absDiff.toFixed(1)}% por debajo del promedio del comp set (${marketAverage.toFixed(2)}). El umbral para severidad media es ${settings.significantDiffPct.toFixed(1)}%.`;
 
       alertsToUpsert.push({
         hotelId,
@@ -227,6 +227,18 @@ export class AlertsService {
     }
 
     return AlertSeverity.MEDIUM;
+  }
+
+  private pricingOpportunityTitle(action: RecommendationAction): string {
+    switch (action) {
+      case RecommendationAction.INCREASE:
+        return 'Oportunidad de aumentar tarifa';
+      case RecommendationAction.DECREASE:
+        return 'Oportunidad de bajar tarifa';
+      case RecommendationAction.HOLD:
+      default:
+        return 'Oportunidad tarifaria';
+    }
   }
 
   private async resolveSettings(hotelId: number): Promise<RecommendationSettingsConfig> {

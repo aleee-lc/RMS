@@ -2,6 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { DateRange } from '../models/date-range.model';
 import {
+  MakCorpsMappingResponse,
   RateShopSummaryResponse,
   RunRateShoppingResponse
 } from '../models/rate-shopping.model';
@@ -37,5 +38,27 @@ export class RateShoppingService {
       includeHotelSelf: input.includeHotelSelf ?? true,
       competitorNames: input.competitorNames
     });
+  }
+
+  runMakCorps(input: {
+    city: string;
+    checkInDate: string;
+    checkOutDate: string;
+    adults: number;
+    includeHotelSelf?: boolean;
+    competitorNames?: string[];
+  }): Observable<RunRateShoppingResponse> {
+    return this.api.post<RunRateShoppingResponse>('/rate-shopping/run-makcorps', {
+      city: input.city,
+      checkInDate: input.checkInDate,
+      checkOutDate: input.checkOutDate,
+      adults: input.adults,
+      includeHotelSelf: input.includeHotelSelf ?? true,
+      competitorNames: input.competitorNames
+    });
+  }
+
+  searchMakCorpsMapping(name: string): Observable<MakCorpsMappingResponse> {
+    return this.api.get<MakCorpsMappingResponse>('/rate-shopping/makcorps/mapping', { name });
   }
 }

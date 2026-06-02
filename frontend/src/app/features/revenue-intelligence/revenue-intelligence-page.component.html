@@ -109,6 +109,16 @@
           <mat-icon>{{ rateShopRefreshing() ? 'hourglass_empty' : 'travel_explore' }}</mat-icon>
           {{ rateShopRefreshing() ? 'Actualizando' : 'Refresh rate shop' }}
         </button>
+
+        <button
+          mat-stroked-button
+          type="button"
+          (click)="onRefreshMakCorps()"
+          [disabled]="makCorpsRefreshing()"
+        >
+          <mat-icon>{{ makCorpsRefreshing() ? 'hourglass_empty' : 'api' }}</mat-icon>
+          {{ makCorpsRefreshing() ? 'MakCorps...' : 'Refresh MakCorps' }}
+        </button>
       </div>
 
       <div class="rate-watch-grid" *ngIf="publicRateWatch() as market; else emptyRateWatch">
@@ -147,6 +157,11 @@
           <span>Ultimo scrape</span>
           <strong>{{ rateShopFreshnessLabel() }}</strong>
         </div>
+      </div>
+
+      <div class="state-card compact-state" *ngIf="!rateShopLoading()">
+        <strong>MakCorps usa hotel IDs propios.</strong> Configura `MAKCORPS_API_KEY` y
+        `MAKCORPS_HOTEL_IDS_JSON` en el backend para habilitar este boton.
       </div>
 
       <div class="rate-watch-list" *ngIf="rateShopSummary()?.cheapestPublicRates?.length">

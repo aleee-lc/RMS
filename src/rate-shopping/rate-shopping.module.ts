@@ -7,6 +7,7 @@ import { RateShoppingScheduler } from './rate-shopping.scheduler';
 import { RATE_SHOPPING_SCRAPERS, RateShoppingService } from './rate-shopping.service';
 import { BookingComScraper } from './scrapers/booking-com.scraper';
 import { GoogleHotelsPublicScraper } from './scrapers/google-hotels-public.scraper';
+import { MakCorpsHotelApiProvider } from './scrapers/makcorps-hotel-api.provider';
 
 @Module({
   imports: [PrismaModule, CommonModule],
@@ -14,6 +15,7 @@ import { GoogleHotelsPublicScraper } from './scrapers/google-hotels-public.scrap
   providers: [
     GoogleHotelsPublicScraper,
     BookingComScraper,
+    MakCorpsHotelApiProvider,
     {
       provide: RATE_SHOPPING_SCRAPERS,
       useFactory: (

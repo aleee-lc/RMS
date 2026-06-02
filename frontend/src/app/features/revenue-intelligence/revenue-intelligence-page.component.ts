@@ -69,6 +69,7 @@ export class RevenueIntelligencePageComponent {
   readonly lastUpdated = signal('');
   readonly rateShopLoading = signal(false);
   readonly rateShopRefreshing = signal(false);
+  readonly makCorpsRefreshing = signal(false);
   readonly marketCity = signal('Los Mochis');
 
   readonly topOpportunities = computed(() => this.summary()?.top_opportunities ?? []);
@@ -159,6 +160,42 @@ export class RevenueIntelligencePageComponent {
       });
   }
 
+  onRefreshMakCorps(): void {
+    const range = this.dateRange();
+    const city = this.marketCity().trim();
+    if (!city) {
+      this.snackBar.open('Indica la ciudad para correr MakCorps.', 'Cerrar', {
+        duration: 2600
+      });
+      return;
+    }
+
+    this.makCorpsRefreshing.set(true);
+    this.rateShoppingService
+      .runMakCorps({
+        city,
+        checkInDate: range.startDate,
+        checkOutDate: this.nextDate(range.startDate),
+        adults: 2,
+        includeHotelSelf: true
+      })
+      .subscribe({
+        next: () => {
+          this.loadRateShopSummary(range, true);
+          this.snackBar.open('MakCorps actualizado con tarifas publicas.', 'Cerrar', {
+            duration: 2400
+          });
+        },
+        error: (error: HttpErrorResponse) => {
+          this.makCorpsRefreshing.set(false);
+          const message = this.resolveRateShopError(error);
+          this.snackBar.open(message, 'Cerrar', {
+            duration: 3200
+          });
+        }
+      });
+  }
+
   private refresh(dateRange: DateRange): void {
     this.dateRange.set(dateRange);
     this.loading.set(true);
@@ -196,6 +233,7 @@ export class RevenueIntelligencePageComponent {
           this.rateShopSummary.set(null);
           this.rateShopLoading.set(false);
           this.rateShopRefreshing.set(false);
+          this.makCorpsRefreshing.set(false);
           return of(null);
         })
       )
@@ -207,6 +245,7 @@ export class RevenueIntelligencePageComponent {
         this.rateShopSummary.set(summary);
         this.rateShopLoading.set(false);
         this.rateShopRefreshing.set(false);
+        this.makCorpsRefreshing.set(false);
       },
     });
   }

@@ -25,6 +25,33 @@ export class RateShoppingController {
 
   @Post('run')
   async run(@Body() body: RunRateShoppingDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.runUsingProvider(body, user, 'scraper');
+  }
+
+  @Post('run-makcorps')
+  async runMakCorps(@Body() body: RunRateShoppingDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.runUsingProvider(body, user, 'makcorps');
+  }
+
+  @Get('makcorps/mapping')
+  async getMakCorpsMapping(@Query('name') name: string | undefined) {
+    if (!name?.trim()) {
+      throw new BadRequestException('name is required');
+    }
+
+    const items = await this.rateShoppingService.searchMakCorpsMapping(name);
+    return {
+      query: name.trim(),
+      count: items.length,
+      items
+    };
+  }
+
+  private async runUsingProvider(
+    body: RunRateShoppingDto,
+    user: AuthenticatedUser,
+    provider: 'scraper' | 'makcorps'
+  ) {
     const checkInDate = parseIsoDate(body.checkInDate);
     const checkOutDate = parseIsoDate(body.checkOutDate);
 
@@ -39,7 +66,7 @@ export class RateShoppingController {
 
     let result;
     try {
-      result = await this.rateShoppingService.runForHotel({
+      const input = {
         hotelId: hotel.id,
         city: body.city.trim(),
         checkInDate,
@@ -47,7 +74,11 @@ export class RateShoppingController {
         adults: body.adults ?? 2,
         includeHotelSelf: body.includeHotelSelf ?? true,
         competitorNames: body.competitorNames
-      });
+      };
+      result =
+        provider === 'makcorps'
+          ? await this.rateShoppingService.runMakCorpsForHotel(input)
+          : await this.rateShoppingService.runForHotel(input);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new BadGatewayException(`Rate shopping failed: ${message}`);
@@ -58,7 +89,6 @@ export class RateShoppingController {
       ...result
     };
   }
-
   @Get('snapshots')
   async getSnapshots(
     @Query() query: RateShopSnapshotsQueryDto,

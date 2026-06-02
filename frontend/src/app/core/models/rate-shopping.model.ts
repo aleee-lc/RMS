@@ -67,3 +67,14 @@ export interface RunRateShoppingResponse {
     competitorRatesSynced: number;
   };
 }
+
+export interface MakCorpsMappingResponse {
+  query: string;
+  count: number;
+  items: Array<{
+    documentId: string;
+    name: string;
+    highlightedName: string | null;
+    geoName: string | null;
+  }>;
+}

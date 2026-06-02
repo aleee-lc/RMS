@@ -11,6 +11,7 @@ import {
   RateShoppingScraper,
   RateShoppingSearchInput
 } from './scrapers/rate-shopping-scraper.interface';
+import { MakCorpsHotelApiProvider } from './scrapers/makcorps-hotel-api.provider';
 
 export const RATE_SHOPPING_SCRAPERS = Symbol('RATE_SHOPPING_SCRAPERS');
 
@@ -62,10 +63,26 @@ export class RateShoppingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly normalizer: RateShoppingNormalizer,
-    @Inject(RATE_SHOPPING_SCRAPERS) private readonly scrapers: RateShoppingScraper[]
+    @Inject(RATE_SHOPPING_SCRAPERS) private readonly scrapers: RateShoppingScraper[],
+    private readonly makCorpsProvider: MakCorpsHotelApiProvider
   ) {}
 
   async runForHotel(input: RunRateShoppingInput) {
+    return this.runForHotelUsingScrapers(input, this.scrapers);
+  }
+
+  async runMakCorpsForHotel(input: RunRateShoppingInput) {
+    return this.runForHotelUsingScrapers(input, [this.makCorpsProvider]);
+  }
+
+  async searchMakCorpsMapping(name: string) {
+    return this.makCorpsProvider.searchMapping(name);
+  }
+
+  private async runForHotelUsingScrapers(
+    input: RunRateShoppingInput,
+    scrapers: RateShoppingScraper[]
+  ) {
     const hotel = await this.prisma.hotel.findUnique({
       where: { id: input.hotelId },
       select: { id: true, name: true, currency: true }
@@ -98,7 +115,7 @@ export class RateShoppingService {
         adults: input.adults
       };
 
-      const execution = await this.executeTarget(searchInput);
+      const execution = await this.executeTarget(searchInput, scrapers);
       targetResults.push(execution.result);
       normalizedRowsAllTargets.push(...execution.normalizedRows);
       if (execution.result.bestOffer || execution.result.rawRows > 0 || execution.result.normalizedRows > 0) {
@@ -379,11 +396,25 @@ export class RateShoppingService {
   private async executeTarget(input: RateShoppingSearchInput): Promise<{
     result: TargetExecutionResult;
     normalizedRows: NormalizedRateShoppingResult[];
+  }>;
+  private async executeTarget(
+    input: RateShoppingSearchInput,
+    scrapers: RateShoppingScraper[]
+  ): Promise<{
+    result: TargetExecutionResult;
+    normalizedRows: NormalizedRateShoppingResult[];
+  }>;
+  private async executeTarget(
+    input: RateShoppingSearchInput,
+    scrapers: RateShoppingScraper[] = this.scrapers
+  ): Promise<{
+    result: TargetExecutionResult;
+    normalizedRows: NormalizedRateShoppingResult[];
   }> {
     const allRawRows = [];
     const scraperErrors: string[] = [];
 
-    for (const scraper of this.scrapers) {
+    for (const scraper of scrapers) {
       try {
         const rows = await scraper.scrape(input);
         allRawRows.push(...rows);

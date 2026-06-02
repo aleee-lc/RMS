@@ -149,6 +149,30 @@ export class AlertsPageComponent {
     return type;
   }
 
+  alertTitleLabel(title: string): string {
+    const normalized = title.trim().toLowerCase();
+    switch (normalized) {
+      case 'price below comp set':
+        return 'Precio por debajo del comp set';
+      case 'price above comp set':
+        return 'Precio por encima del comp set';
+      case 'low occupancy detected':
+        return 'Baja ocupación detectada';
+      case 'high occupancy detected':
+        return 'Alta ocupación detectada';
+      default:
+        return title;
+    }
+  }
+
+  alertMessageLabel(message: string): string {
+    return message
+      .replace(/^Your price \(([\d.]+)\) is ([\d.]+)% below comp set average \(([\d.]+)\)\. Threshold for medium severity is ([\d.]+)%\.$/i, 'Tu tarifa ($1) está $2% por debajo del promedio del comp set ($3). El umbral para severidad media es $4%.')
+      .replace(/^Your price \(([\d.]+)\) is ([\d.]+)% above comp set average \(([\d.]+)\)\. Threshold for medium severity is ([\d.]+)%\.$/i, 'Tu tarifa ($1) está $2% por encima del promedio del comp set ($3). El umbral para severidad media es $4%.')
+      .replace(/^Occupancy at ([\d.]+)% is below threshold ([\d.]+)%\.$/i, 'La ocupación de $1% está por debajo del umbral de $2%.')
+      .replace(/^Occupancy at ([\d.]+)% is above threshold ([\d.]+)%\.$/i, 'La ocupación de $1% está por encima del umbral de $2%.');
+  }
+
   isToggling(alertId: number): boolean {
     return this.togglingAlertIds().includes(alertId);
   }

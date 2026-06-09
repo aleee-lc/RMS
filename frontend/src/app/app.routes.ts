@@ -6,6 +6,7 @@ import { ReportsPageComponent } from './features/reports/reports-page.component'
 import { RevenueCalendarPageComponent } from './features/revenue-calendar/revenue-calendar-page.component';
 import { RevenueIntelligencePageComponent } from './features/revenue-intelligence/revenue-intelligence-page.component';
 import { UploadPageComponent } from './features/upload/upload-page.component';
+import { RatePlanGovernancePageComponent } from './features/rate-plan-governance/rate-plan-governance-page.component';
 import { LandingPageComponent } from './features/landing/landing-page.component';
 import { LoginPageComponent } from './features/login/login-page.component';
 import { authGuard } from './core/guards/auth.guard';
@@ -36,6 +37,12 @@ export const routes: Routes = [
   {
     path: 'revenue-intelligence',
     redirectTo: 'revenue-command',
+  },
+  {
+    path: 'rate-plan-governance',
+    component: RatePlanGovernancePageComponent,
+    title: 'RevSight | Rate Plan Governance',
+    canActivate: [authGuard],
   },
   {
     path: 'upload',

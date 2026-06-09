@@ -1,0 +1,232 @@
+<section class="page">
+  <div class="page-header hero-card">
+    <div class="page-title">
+      <span class="eyebrow">Commercial Layer</span>
+      <h1>Rate Plan Governance</h1>
+      <p>Convierte el rate plan master en un catálogo comercial auditable y accionable.</p>
+    </div>
+    <div class="hero-stats">
+      <article class="stat-card" *ngFor="let stat of stats()">
+        <mat-icon>{{ stat.icon }}</mat-icon>
+        <div>
+          <span>{{ stat.label }}</span>
+          <strong>{{ stat.value }}</strong>
+        </div>
+      </article>
+    </div>
+  </div>
+
+  <mat-card class="section-card import-card">
+    <mat-card-header>
+      <mat-card-title>Importar master</mat-card-title>
+      <mat-card-subtitle>Sube el Excel corporativo para reconstruir el catálogo comercial del hotel.</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content class="import-grid">
+      <div class="import-step">
+        <p class="hint">
+          Esta primera versión importa las hojas <strong>Abbreviated RPM</strong> y
+          <strong>WHR Defined</strong>, detecta derivaciones, rangos de descuento y hallazgos.
+        </p>
+        <input #fileInput type="file" accept=".xlsx,.xls" hidden (change)="onFileSelected($event)" />
+        <div class="inline-actions">
+          <button mat-stroked-button type="button" (click)="fileInput.click()" [disabled]="importing()">
+            <mat-icon>attach_file</mat-icon>
+            Seleccionar Excel
+          </button>
+          <span class="file-name" *ngIf="selectedFile() as file">{{ file.name }}</span>
+        </div>
+      </div>
+
+      <div class="import-step">
+        <button mat-flat-button color="primary" type="button" (click)="onImport()" [disabled]="importing() || !canImport()">
+          <mat-icon>cloud_upload</mat-icon>
+          {{ importing() ? 'Importando...' : 'Importar master' }}
+        </button>
+        <mat-progress-bar *ngIf="importing()" mode="indeterminate"></mat-progress-bar>
+        <p class="hint">
+          El catálogo vigente del hotel se reemplaza con la última carga del master.
+        </p>
+      </div>
+
+      <div class="import-step" *ngIf="importResult() as result">
+        <strong>Última importación</strong>
+        <div class="mini-metrics">
+          <span>{{ result.ratePlansUpserted }} rate plans</span>
+          <span>{{ result.sourceBrand ?? 'Brand N/D' }}</span>
+          <span>{{ result.sourceFile }}</span>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <div class="state-card" *ngIf="errorMessage() as error">
+    <strong>Error:</strong> {{ error }}
+  </div>
+
+  <div class="dashboard-grid">
+    <mat-card class="section-card">
+      <mat-card-header>
+        <mat-card-title>Hallazgos</mat-card-title>
+        <mat-card-subtitle>Riesgos y huecos de gobernanza detectados en el master.</mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <mat-progress-bar *ngIf="loadingInsights()" mode="indeterminate"></mat-progress-bar>
+
+        <div class="tag-grid">
+          <article class="tag-card" *ngFor="let item of topMarketSegments()">
+            <span>Segmento</span>
+            <strong>{{ item.label }}</strong>
+            <small>{{ item.count }} rate plans</small>
+          </article>
+
+          <article class="tag-card alt" *ngFor="let item of topPricingStandards()">
+            <span>Pricing</span>
+            <strong>{{ item.label }}</strong>
+            <small>{{ item.count }} rate plans</small>
+          </article>
+        </div>
+
+        <div class="insight-list" *ngIf="visibleInsights().length; else noInsights">
+          <article class="insight-card" *ngFor="let insight of visibleInsights()" [class.high]="insight.severity === 'high'" [class.medium]="insight.severity === 'medium'">
+            <div class="insight-header">
+              <strong>{{ insight.code }}</strong>
+              <mat-chip>{{ severityLabel(insight.severity) }}</mat-chip>
+            </div>
+            <span>{{ insight.name }}</span>
+            <p>{{ insight.message }}</p>
+          </article>
+        </div>
+
+        <ng-template #noInsights>
+          <p class="empty-state">Todavía no hay hallazgos. Importa el master o revisa los filtros.</p>
+        </ng-template>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="section-card">
+      <mat-card-header>
+        <mat-card-title>Catálogo</mat-card-title>
+        <mat-card-subtitle>Explora rate codes, segmentos y dependencias.</mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <form class="filters" [formGroup]="filterForm" (ngSubmit)="onApplyFilters()">
+          <mat-form-field appearance="outline">
+            <mat-label>Buscar</mat-label>
+            <input matInput formControlName="search" placeholder="Code, nombre, segmento" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Segmento</mat-label>
+            <input matInput formControlName="marketSegment" placeholder="OTA Retail, Loyalty..." />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Pricing</mat-label>
+            <input matInput formControlName="pricingStandard" placeholder="Percent, Flat..." />
+          </mat-form-field>
+
+          <mat-checkbox formControlName="derivedOnly">Solo derivados</mat-checkbox>
+
+          <button mat-stroked-button type="submit">
+            <mat-icon>filter_alt</mat-icon>
+            Aplicar
+          </button>
+        </form>
+
+        <mat-progress-bar *ngIf="loadingCatalog()" mode="indeterminate"></mat-progress-bar>
+
+        <div class="catalog-list" *ngIf="ratePlans().length; else emptyCatalog">
+          <button
+            type="button"
+            class="catalog-item"
+            *ngFor="let item of ratePlans()"
+            [class.active]="item.id === selectedRatePlanId()"
+            (click)="onSelectRatePlan(item)"
+          >
+            <div class="catalog-main">
+              <strong>{{ item.code }}</strong>
+              <span>{{ item.name }}</span>
+            </div>
+            <div class="catalog-meta">
+              <small>{{ item.marketSegment ?? 'Segmento N/D' }}</small>
+              <small *ngIf="item.derivedFromCode">Deriva de {{ item.derivedFromCode }}</small>
+            </div>
+          </button>
+        </div>
+
+        <ng-template #emptyCatalog>
+          <p class="empty-state">No hay rate plans cargados para este hotel.</p>
+        </ng-template>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <mat-card class="section-card detail-card" *ngIf="selectedRatePlan() as detail">
+    <mat-card-header>
+      <mat-card-title>{{ detail.code }} · {{ detail.name }}</mat-card-title>
+      <mat-card-subtitle>{{ detail.marketSegment ?? 'Segmento no definido' }}</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <mat-progress-bar *ngIf="loadingDetail()" mode="indeterminate"></mat-progress-bar>
+
+      <div class="detail-grid">
+        <article class="detail-block">
+          <span>Pricing standard</span>
+          <strong>{{ detail.pricingStandard ?? 'N/D' }}</strong>
+        </article>
+        <article class="detail-block">
+          <span>Deriva de</span>
+          <strong>{{ detail.derivedFromCode ?? 'Base / sin padre' }}</strong>
+        </article>
+        <article class="detail-block">
+          <span>Participación</span>
+          <strong>{{ detail.participationRequirement ?? 'N/D' }}</strong>
+        </article>
+        <article class="detail-block">
+          <span>Rango descuento</span>
+          <strong>{{ detail.discountMin ?? 'N/D' }} / {{ detail.discountMax ?? 'N/D' }}</strong>
+        </article>
+        <article class="detail-block">
+          <span>Mandatory</span>
+          <strong>{{ booleanLabel(detail.mandatory) }}</strong>
+        </article>
+        <article class="detail-block">
+          <span>Managed in CRS only</span>
+          <strong>{{ booleanLabel(detail.manageInCrsOnly) }}</strong>
+        </article>
+      </div>
+
+      <div class="narrative-grid">
+        <article class="narrative-block">
+          <h3>Descripción</h3>
+          <p>{{ detail.descriptionLong ?? detail.descriptionShort ?? 'Sin descripción operativa.' }}</p>
+        </article>
+
+        <article class="narrative-block">
+          <h3>Canales</h3>
+          <div class="mini-metrics">
+            <span *ngFor="let channel of detail.channels | keyvalue">
+              {{ channel.key }}: {{ channel.value ? 'Si' : 'No' }}
+            </span>
+          </div>
+        </article>
+
+        <article class="narrative-block" *ngIf="detail.children.length">
+          <h3>Rate plans dependientes</h3>
+          <div class="child-list">
+            <span *ngFor="let child of detail.children">{{ child.code }} · {{ child.name }}</span>
+          </div>
+        </article>
+
+        <article class="narrative-block">
+          <h3>Notas para hotel</h3>
+          <p>{{ detail.additionalInformation ?? 'Sin notas específicas en el master.' }}</p>
+        </article>
+      </div>
+    </mat-card-content>
+  </mat-card>
+</section>

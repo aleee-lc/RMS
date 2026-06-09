@@ -84,8 +84,84 @@ model Hotel {
   recommendationSettings RecommendationSettings?
   memberships     HotelMembership[]
   inviteCodes     HotelInviteCode[]
+  ratePlanImports RatePlanImport[]
+  ratePlans       RatePlan[]
 
   @@index([name])
+}
+
+model RatePlanImport {
+  id               Int        @id @default(autoincrement())
+  hotelId          Int
+  sourceFile       String
+  sourceBrand      String?
+  importedAt       DateTime   @default(now())
+  rowsParsed       Int        @default(0)
+  ratePlansUpserted Int       @default(0)
+  sheetSummary     Json?
+  hotel            Hotel      @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  ratePlans        RatePlan[]
+
+  @@index([hotelId, importedAt])
+}
+
+model RatePlan {
+  id                           Int             @id @default(autoincrement())
+  hotelId                      Int
+  importId                     Int
+  code                         String
+  name                         String
+  region                       String?
+  country                      String?
+  sourceBrand                  String?
+  rateCategory                 String?
+  rateType                     String?
+  redemptionType               String?
+  marketSegment                String?
+  pricingStandard              String?
+  participationRequirement     String?
+  derivedFromCode              String?
+  derivedFormula               String?
+  roomTypeStandard             String?
+  mirrorPoolAssignment         String?
+  additionalInformation        String?
+  descriptionShort             String?
+  descriptionLong              String?
+  pmsCode                      String?
+  pmsGroupCode                 String?
+  gdsCategory                  String?
+  sourceAssignment             String?
+  comparisonType               String?
+  targetRateType               String?
+  inventoryRequired            Int?
+  sellLimit                    Int?
+  minStayThru                  Int?
+  maxStayThru                  Int?
+  minLeadDays                  Int?
+  maxLeadDays                  Int?
+  discountMin                  Decimal?        @db.Decimal(10, 2)
+  discountMax                  Decimal?        @db.Decimal(10, 2)
+  defaultDiscountRecommendation Decimal?       @db.Decimal(10, 2)
+  deriveOffsetAmount           Decimal?        @db.Decimal(10, 2)
+  adjustmentAmount             Decimal?        @db.Decimal(10, 2)
+  rewardsQualifying            Boolean?
+  mandatory                    Boolean?
+  manageInCrsOnly              Boolean?
+  commissionable               Boolean?
+  lra                          Boolean?
+  channels                     Json?
+  rawAbbreviated               Json?
+  rawDefined                   Json?
+  createdAt                    DateTime        @default(now())
+  updatedAt                    DateTime        @updatedAt
+  hotel                        Hotel           @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  import                       RatePlanImport  @relation(fields: [importId], references: [id], onDelete: Cascade)
+
+  @@unique([hotelId, code])
+  @@index([hotelId, marketSegment])
+  @@index([hotelId, pricingStandard])
+  @@index([hotelId, derivedFromCode])
+  @@index([hotelId, importId])
 }
 
 model HotelInviteCode {

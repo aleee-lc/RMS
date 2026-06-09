@@ -15,6 +15,7 @@ import { BiModule } from './bi/bi.module';
 import { AuthModule } from './auth/auth.module';
 import { ExecutiveModule } from './executive/executive.module';
 import { HealthController } from './health.controller';
+import { RatePlansModule } from './rate-plans/rate-plans.module';
 
 @Module({
   imports: [
@@ -32,7 +33,8 @@ import { HealthController } from './health.controller';
     CompetitorsModule,
     RateShoppingModule,
     BiModule,
-    ExecutiveModule
+    ExecutiveModule,
+    RatePlansModule
   ],
   controllers: [HealthController]
 })

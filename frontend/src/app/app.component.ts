@@ -53,6 +53,7 @@ export class AppComponent {
       label: 'Data',
       items: [
         { label: 'Upload Center', icon: 'upload_file', path: '/upload' },
+        { label: 'Rate Plan Governance', icon: 'account_tree', path: '/rate-plan-governance' },
         { label: 'Reports & Exports', icon: 'summarize', path: '/reports' },
       ],
     },

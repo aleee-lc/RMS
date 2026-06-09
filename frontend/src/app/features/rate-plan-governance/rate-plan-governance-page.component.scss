@@ -1,0 +1,248 @@
+.hero-card {
+  align-items: start;
+  background:
+    radial-gradient(circle at top left, rgba(15, 118, 110, 0.18), transparent 45%),
+    linear-gradient(135deg, #ffffff 0%, #f3fbfa 100%);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-md);
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.9fr);
+  padding: 18px;
+}
+
+.eyebrow {
+  color: var(--brand-700);
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero-stats {
+  display: grid;
+  gap: 10px;
+}
+
+.stat-card {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto 1fr;
+  padding: 12px;
+}
+
+.stat-card mat-icon {
+  color: var(--brand-700);
+}
+
+.stat-card span {
+  color: var(--text-soft);
+  display: block;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+}
+
+.stat-card strong {
+  color: var(--text-strong);
+  font-size: 1.1rem;
+}
+
+.import-grid,
+.dashboard-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.import-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.import-step {
+  background: var(--bg-panel-soft);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.dashboard-grid {
+  grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.2fr);
+}
+
+.hint,
+.empty-state {
+  color: var(--text-soft);
+  font-size: 0.86rem;
+}
+
+.file-name {
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mini-metrics,
+.child-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mini-metrics span,
+.child-list span {
+  background: #ffffff;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  color: var(--text-soft);
+  font-size: 0.78rem;
+  padding: 6px 10px;
+}
+
+.tag-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin-bottom: 14px;
+}
+
+.tag-card {
+  background: #eef9f7;
+  border: 1px solid rgba(15, 118, 110, 0.14);
+  border-radius: var(--radius-sm);
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+}
+
+.tag-card.alt {
+  background: #f8f6ef;
+  border-color: rgba(146, 118, 35, 0.14);
+}
+
+.tag-card span {
+  color: var(--text-soft);
+  font-size: 0.73rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.tag-card strong {
+  color: var(--text-strong);
+}
+
+.insight-list,
+.catalog-list {
+  display: grid;
+  gap: 10px;
+}
+
+.insight-card,
+.catalog-item,
+.detail-block,
+.narrative-block {
+  background: #ffffff;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+}
+
+.insight-card {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+}
+
+.insight-card.high {
+  border-left: 4px solid #b91c1c;
+}
+
+.insight-card.medium {
+  border-left: 4px solid #c27b19;
+}
+
+.insight-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.catalog-item {
+  cursor: pointer;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  text-align: left;
+  transition: border-color 0.18s ease, transform 0.18s ease;
+}
+
+.catalog-item:hover,
+.catalog-item.active {
+  border-color: rgba(15, 118, 110, 0.4);
+  transform: translateY(-1px);
+}
+
+.catalog-main,
+.catalog-meta {
+  display: grid;
+  gap: 3px;
+}
+
+.catalog-main span,
+.catalog-meta small {
+  color: var(--text-soft);
+}
+
+.filters {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto auto;
+  margin-bottom: 12px;
+}
+
+.detail-card {
+  margin-top: 4px;
+}
+
+.detail-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  margin-bottom: 14px;
+}
+
+.detail-block,
+.narrative-block {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+}
+
+.detail-block span,
+.narrative-block h3 {
+  color: var(--text-soft);
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.narrative-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+@media (max-width: 960px) {
+  .hero-card,
+  .dashboard-grid,
+  .filters {
+    grid-template-columns: 1fr;
+  }
+}
